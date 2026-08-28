@@ -33,6 +33,7 @@ function openHouseholdDb(slug) {
 }
 
 export function getHouseholdDb(slug) {
+  if (!slug) throw new Error('getHouseholdDb requires a household slug');
   if (!openDbs.has(slug)) {
     openDbs.set(slug, openHouseholdDb(slug));
   }
@@ -52,19 +53,36 @@ export function listHouseholdSlugs() {
  * folder, byte-for-byte. This app's original database was always shaped
  * exactly like one household, so this is a file move, not a data migration —
  * no rows are read, transformed, or re-inserted.
+ *
+ * Safe to interrupt at any point (container restart, crash, etc.) and rerun:
+ * files are staged in a directory *outside* HOUSEHOLDS_DIR first, so
+ * `listHouseholdSlugs()` — the guard against re-running — can't see it as
+ * "done" until every file has actually been moved. The final step, renaming
+ * that staging directory into place, is a single atomic filesystem operation
+ * (same-filesystem directory rename), so there's no window where the
+ * migration could be half-visible as complete.
  */
 export function migrateLegacySingleHouseholdDb() {
-  if (!fs.existsSync(LEGACY_DB_PATH)) return;
-  if (listHouseholdSlugs().length > 0) return;
+  if (listHouseholdSlugs().length > 0) return; // already completed
 
   const targetDir = path.join(HOUSEHOLDS_DIR, 'household-1');
-  fs.mkdirSync(targetDir, { recursive: true });
+  const stagingDir = path.join(DATA_DIR, '.household-1.migrating');
+
+  if (!fs.existsSync(stagingDir)) {
+    if (!fs.existsSync(LEGACY_DB_PATH)) return; // fresh install, nothing to migrate
+    fs.mkdirSync(stagingDir, { recursive: true });
+  }
+
   for (const suffix of ['', '-wal', '-shm']) {
     const from = `${LEGACY_DB_PATH}${suffix}`;
-    if (fs.existsSync(from)) {
-      fs.renameSync(from, path.join(targetDir, `data.db${suffix}`));
+    const to = path.join(stagingDir, `data.db${suffix}`);
+    if (fs.existsSync(from) && !fs.existsSync(to)) {
+      fs.renameSync(from, to);
     }
   }
+
+  fs.mkdirSync(HOUSEHOLDS_DIR, { recursive: true });
+  fs.renameSync(stagingDir, targetDir);
   console.log(`Migrated legacy single-household database into ${targetDir}`);
 }
 
