@@ -2,7 +2,8 @@ import { toNodeHandler } from '@modelcontextprotocol/node';
 import { createMcpHandler, McpServer, OAuthError, OAuthErrorCode } from '@modelcontextprotocol/server';
 import { requireBearerAuth } from '@modelcontextprotocol/express';
 import * as z from 'zod/v4';
-import { getUserForApiToken } from './apiTokens.js';
+import { hashToken } from './apiTokens.js';
+import { findHouseholdByTokenHash, getHouseholdDb } from './households.js';
 import { createEvent, deleteEvent, listEvents, updateEvent } from './eventsService.js';
 import {
   createGrowthMeasurement,
@@ -17,16 +18,19 @@ const TEN_YEARS_SECONDS = 10 * 365 * 24 * 60 * 60;
 
 const tokenVerifier = {
   async verifyAccessToken(token) {
-    const user = getUserForApiToken(token);
-    if (!user) {
+    const found = findHouseholdByTokenHash(hashToken(token));
+    if (!found) {
       throw new OAuthError(OAuthErrorCode.InvalidToken, 'Unknown or revoked token');
     }
+    found.db.prepare(`UPDATE api_tokens SET last_used_at = datetime('now') WHERE id = ?`).run(
+      found.result.tokenId
+    );
     return {
       token,
       clientId: 'baby-tracker-assistant',
       scopes: ['mcp'],
       expiresAt: Math.floor(Date.now() / 1000) + TEN_YEARS_SECONDS,
-      extra: { userId: user.id, displayName: user.displayName },
+      extra: { userId: found.result.id, displayName: found.result.displayName, householdSlug: found.slug },
     };
   },
 };
@@ -43,6 +47,9 @@ function buildServer(ctx) {
   const server = new McpServer({ name: 'baby-tracker', version: '1.0.0' });
   const userId = ctx.authInfo?.extra?.userId;
   const displayName = ctx.authInfo?.extra?.displayName ?? 'unknown';
+  // Every tool below is scoped to exactly this one household's database —
+  // resolved once from the bearer token, never from anything the caller sends.
+  const db = getHouseholdDb(ctx.authInfo?.extra?.householdSlug);
 
   server.registerTool(
     'get_current_time',
@@ -68,7 +75,7 @@ function buildServer(ctx) {
     },
     async ({ wet, dirty, consistency, at }) => {
       const when = at || nowIso();
-      const event = createEvent({
+      const event = createEvent(db, {
         type: 'diaper',
         startedAt: when,
         endedAt: when,
@@ -92,7 +99,7 @@ function buildServer(ctx) {
     },
     async ({ volumeMl, contents, at }) => {
       const when = at || nowIso();
-      const event = createEvent({
+      const event = createEvent(db, {
         type: 'bottle',
         startedAt: when,
         endedAt: when,
@@ -115,7 +122,7 @@ function buildServer(ctx) {
       }),
     },
     async ({ side, startedAt, endedAt }) => {
-      const event = createEvent({
+      const event = createEvent(db, {
         type: 'breastfeeding',
         startedAt,
         endedAt,
@@ -136,7 +143,7 @@ function buildServer(ctx) {
       }),
     },
     async ({ startedAt, endedAt }) => {
-      const event = createEvent({ type: 'sleep', startedAt, endedAt, details: {}, createdBy: userId });
+      const event = createEvent(db, { type: 'sleep', startedAt, endedAt, details: {}, createdBy: userId });
       return textResult(`Logged sleep (id ${event.id}) from ${startedAt} to ${endedAt}.`);
     }
   );
@@ -152,7 +159,7 @@ function buildServer(ctx) {
       }),
     },
     async ({ startedAt, endedAt, intensity }) => {
-      const event = createEvent({
+      const event = createEvent(db, {
         type: 'contraction',
         startedAt,
         endedAt: endedAt || null,
@@ -174,7 +181,7 @@ function buildServer(ctx) {
       }),
     },
     async ({ startedAt, endedAt, location }) => {
-      const event = createEvent({
+      const event = createEvent(db, {
         type: 'outing',
         startedAt,
         endedAt: endedAt || null,
@@ -199,7 +206,7 @@ function buildServer(ctx) {
     },
     async ({ who, valueC, at, notes }) => {
       const when = at || nowIso();
-      const event = createEvent({
+      const event = createEvent(db, {
         type: 'temperature',
         startedAt: when,
         endedAt: when,
@@ -225,7 +232,7 @@ function buildServer(ctx) {
     },
     async ({ name, doseAmount, doseUnit, intervalHours, at }) => {
       const when = at || nowIso();
-      const event = createEvent({
+      const event = createEvent(db, {
         type: 'medication',
         startedAt: when,
         endedAt: when,
@@ -249,7 +256,7 @@ function buildServer(ctx) {
       }),
     },
     async ({ type, limit }) => {
-      const events = listEvents({ type }).slice(0, limit);
+      const events = listEvents(db, { type }).slice(0, limit);
       return textResult(JSON.stringify(events, null, 2));
     }
   );
@@ -267,7 +274,7 @@ function buildServer(ctx) {
       }),
     },
     async ({ id, startedAt, endedAt, details }) => {
-      const event = updateEvent(id, { startedAt, endedAt, details });
+      const event = updateEvent(db, id, { startedAt, endedAt, details });
       return textResult(`Updated event ${event.id}.`);
     }
   );
@@ -279,7 +286,7 @@ function buildServer(ctx) {
       inputSchema: z.object({ id: z.number().int() }),
     },
     async ({ id }) => {
-      deleteEvent(id);
+      deleteEvent(db, id);
       return textResult(`Deleted event ${id}.`);
     }
   );
@@ -297,7 +304,7 @@ function buildServer(ctx) {
       }),
     },
     async (args) => {
-      const entry = createGrowthMeasurement({ ...args, createdBy: userId });
+      const entry = createGrowthMeasurement(db, { ...args, createdBy: userId });
       return textResult(`Logged growth measurement (id ${entry.id}) for ${entry.measuredAt}.`);
     }
   );
@@ -308,7 +315,7 @@ function buildServer(ctx) {
       description: "List all of the baby's logged growth measurements, oldest first.",
       inputSchema: z.object({}),
     },
-    async () => textResult(JSON.stringify(listGrowthMeasurements(), null, 2))
+    async () => textResult(JSON.stringify(listGrowthMeasurements(db), null, 2))
   );
 
   server.registerTool(
@@ -325,7 +332,7 @@ function buildServer(ctx) {
       }),
     },
     async ({ id, ...rest }) => {
-      const entry = updateGrowthMeasurement(id, rest);
+      const entry = updateGrowthMeasurement(db, id, rest);
       return textResult(`Updated growth measurement ${entry.id}.`);
     }
   );
@@ -337,7 +344,7 @@ function buildServer(ctx) {
       inputSchema: z.object({ id: z.number().int() }),
     },
     async ({ id }) => {
-      deleteGrowthMeasurement(id);
+      deleteGrowthMeasurement(db, id);
       return textResult(`Deleted growth measurement ${id}.`);
     }
   );
@@ -348,7 +355,7 @@ function buildServer(ctx) {
       description: "Get the baby's name, date of birth, and sex (needed for WHO growth percentile charts).",
       inputSchema: z.object({}),
     },
-    async () => textResult(JSON.stringify(getChild()))
+    async () => textResult(JSON.stringify(getChild(db)))
   );
 
   server.registerTool(
@@ -362,7 +369,7 @@ function buildServer(ctx) {
       }),
     },
     async (args) => {
-      const child = setChild(args);
+      const child = setChild(db, args);
       return textResult(`Child profile set: ${JSON.stringify(child)}`);
     }
   );
@@ -374,7 +381,7 @@ function buildServer(ctx) {
         "List which of the app's Calendar milestones (identified by their key, e.g. 'register-birth', 'vaccines-8w') have been marked done, and when.",
       inputSchema: z.object({}),
     },
-    async () => textResult(JSON.stringify(getMilestoneCompletions()))
+    async () => textResult(JSON.stringify(getMilestoneCompletions(db)))
   );
 
   server.registerTool(
@@ -388,7 +395,7 @@ function buildServer(ctx) {
       }),
     },
     async ({ key, completed }) => {
-      setMilestoneCompletion(key, completed);
+      setMilestoneCompletion(db, key, completed);
       return textResult(`Marked milestone '${key}' as ${completed ? 'done' : 'not done'}.`);
     }
   );

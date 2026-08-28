@@ -1,10 +1,8 @@
-import { db } from './db.js';
-
 /**
  * SQLite can't ALTER a CHECK constraint in place, so widening the `events.type`
  * allow-list needs a rebuild-and-swap.
  */
-function rebuildEventsWithTypes(types) {
+function rebuildEventsWithTypes(db, types) {
   const typeList = types.map((t) => `'${t}'`).join(',');
   db.transaction(() => {
     db.exec(`
@@ -27,12 +25,13 @@ function rebuildEventsWithTypes(types) {
   })();
 }
 
-// Each step is guarded by its own PRAGMA user_version so it only ever runs once.
+// Each step is guarded by its own PRAGMA user_version so it only ever runs once
+// per household database.
 const MIGRATIONS = [
   {
     version: 1,
-    run: () =>
-      rebuildEventsWithTypes([
+    run: (db) =>
+      rebuildEventsWithTypes(db, [
         'diaper',
         'bottle',
         'breastfeeding',
@@ -45,8 +44,8 @@ const MIGRATIONS = [
   },
   {
     version: 2,
-    run: () =>
-      rebuildEventsWithTypes([
+    run: (db) =>
+      rebuildEventsWithTypes(db, [
         'diaper',
         'bottle',
         'breastfeeding',
@@ -60,11 +59,11 @@ const MIGRATIONS = [
   },
 ];
 
-export function runMigrations() {
+export function runMigrations(db) {
   const currentVersion = db.pragma('user_version', { simple: true });
   for (const migration of MIGRATIONS) {
     if (currentVersion >= migration.version) continue;
-    migration.run();
+    migration.run(db);
     db.pragma(`user_version = ${migration.version}`);
     console.log(migration.log);
   }

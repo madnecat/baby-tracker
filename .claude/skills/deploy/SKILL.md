@@ -94,19 +94,60 @@ directly — see `server/src/mcp.js` for the tool list. Clean up with
 environment to click through the UI — a clean build + a full curl pass through
 the changed endpoints is the verification bar, not "looks right."
 
+For anything touching auth, sessions, or the per-household data path, also
+provision a second household (`DB_PATH=.../data-dev/baby-tracker.db node
+scripts/create-household.js household-2 someone:pw:Name`) and confirm its
+session/token can't see or modify household-1's child/events/growth/
+milestones — this is the property the whole multi-household design exists to
+guarantee, so don't skip it.
+
+## Multi-household architecture
+
+Each household is a **fully independent SQLite file** — no shared "core"
+database, no `household_id` column anywhere. See `server/src/households.js`:
+
+- Files live at `${DATA_DIR}/households/<slug>/data.db` (`DATA_DIR` defaults
+  to the directory of `DB_PATH`, i.e. `/data` on the Pi).
+- Login (`username`+`password`, no household selector) works by scanning
+  every household's `users` table for a match — so **usernames must stay
+  unique across all households**. `scripts/create-household.js` enforces this
+  itself when provisioning a new one; there's no enforcement at the DB level
+  since each file's UNIQUE constraint only covers its own users.
+- The very first deploy of this version auto-migrates the old single-file
+  database into `households/household-1/data.db` — a plain file move
+  (`fs.renameSync`, plus its `-wal`/`-shm` siblings), not a row-level
+  migration, since the pre-multi-household database was already shaped
+  exactly like one household. This runs once, guarded by "does
+  `households/` already have anything in it" — safe to leave in the codebase
+  permanently.
+
+**Provisioning a new household** (e.g. onboarding another family) — run this
+on the Pi with the same `DB_PATH`/`DATA_DIR` the running add-on uses:
+```sh
+$PI_SSH "docker exec addon_local_baby_tracker node /app/server/scripts/create-household.js <slug> <username:password:displayName> [...]"
+```
+(The exact way to reach a shell inside the add-on's container hasn't been
+exercised yet as of this writing — confirm the container name via
+`$PI_SSH "docker ps"` first if `addon_local_baby_tracker` doesn't match.)
+Restarting the add-on afterwards isn't required — new households are picked
+up on the next login/token lookup without a restart.
+
 ## Database migrations
 
-`server/schema.sql` runs `CREATE TABLE IF NOT EXISTS` on every boot — fine for
-brand-new tables (just add them there). It is **not** enough for changing an
-existing table's shape on the Pi's already-provisioned database (e.g. widening
-the `events.type` CHECK constraint) — SQLite can't `ALTER` a CHECK constraint,
-so that needs a real migration. Add a new versioned step to
-`server/src/migrations.js` (`MIGRATIONS` array, bump the version number) — it's
-guarded by `PRAGMA user_version` so each step runs exactly once ever, including
-on the live Pi database the first time the new code boots. Always test a
-migration against a *simulated pre-migration* database locally before
-deploying (recreate the old schema by hand, run `runMigrations()`, confirm
-existing rows survive) — this has caught real bugs before.
+`server/schema.sql` runs `CREATE TABLE IF NOT EXISTS` on every boot for
+*every* household database — fine for brand-new tables (just add them there).
+It is **not** enough for changing an existing table's shape on an
+already-provisioned database (e.g. widening the `events.type` CHECK
+constraint) — SQLite can't `ALTER` a CHECK constraint, so that needs a real
+migration. Add a new versioned step to `server/src/migrations.js`
+(`MIGRATIONS` array, bump the version number) — `runMigrations(db)` is guarded
+by that household's own `PRAGMA user_version`, and `index.js` runs it against
+every household database on boot, so each step still runs exactly once per
+household, including on the live Pi database the first time the new code
+boots. Always test a migration against a *simulated pre-migration* database
+locally before deploying (recreate the old schema by hand, run
+`runMigrations(db)`, confirm existing rows survive) — this has caught real
+bugs before.
 
 ## Known gotchas
 

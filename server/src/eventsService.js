@@ -1,5 +1,3 @@
-import { db } from './db.js';
-
 export const EVENT_TYPES = [
   'diaper',
   'bottle',
@@ -24,7 +22,7 @@ export function serializeEvent(row) {
   };
 }
 
-export function listEvents({ type, from, to } = {}) {
+export function listEvents(db, { type, from, to } = {}) {
   const clauses = [];
   const params = [];
   if (type) {
@@ -46,7 +44,7 @@ export function listEvents({ type, from, to } = {}) {
     .map(serializeEvent);
 }
 
-export function getActiveEvent(type) {
+export function getActiveEvent(db, type) {
   const row = db
     .prepare(
       `SELECT * FROM events WHERE type = ? AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1`
@@ -55,7 +53,7 @@ export function getActiveEvent(type) {
   return row ? serializeEvent(row) : null;
 }
 
-export function createEvent({ type, startedAt, endedAt, details, createdBy }) {
+export function createEvent(db, { type, startedAt, endedAt, details, createdBy }) {
   if (!EVENT_TYPES.includes(type)) {
     throw new Error(`type must be one of ${EVENT_TYPES.join(', ')}`);
   }
@@ -72,12 +70,12 @@ export function createEvent({ type, startedAt, endedAt, details, createdBy }) {
   return serializeEvent(row);
 }
 
-export function getEvent(id) {
+export function getEvent(db, id) {
   const row = db.prepare(`SELECT * FROM events WHERE id = ?`).get(id);
   return row ? serializeEvent(row) : null;
 }
 
-export function updateEvent(id, { startedAt, endedAt, details } = {}) {
+export function updateEvent(db, id, { startedAt, endedAt, details } = {}) {
   const existing = db.prepare(`SELECT * FROM events WHERE id = ?`).get(id);
   if (!existing) throw new Error('Event not found');
   const merged = {
@@ -92,6 +90,6 @@ export function updateEvent(id, { startedAt, endedAt, details } = {}) {
   return serializeEvent(db.prepare(`SELECT * FROM events WHERE id = ?`).get(id));
 }
 
-export function deleteEvent(id) {
+export function deleteEvent(db, id) {
   db.prepare(`DELETE FROM events WHERE id = ?`).run(id);
 }

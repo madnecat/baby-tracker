@@ -1,6 +1,6 @@
 import fs from 'node:fs';
-import { db } from './db.js';
 import { hashPassword } from './auth.js';
+import { getHouseholdDb, listHouseholdSlugs } from './households.js';
 
 function loadOptions() {
   const optionsPath = process.env.OPTIONS_PATH || '/data/options.json';
@@ -21,9 +21,16 @@ function loadOptions() {
   };
 }
 
-export function bootstrapUsers() {
-  const { count } = db.prepare(`SELECT COUNT(*) AS count FROM users`).get();
-  if (count > 0) return;
+/**
+ * Seeds the very first household ("household-1") from the add-on's
+ * Configuration options, but only if household-1 doesn't already exist
+ * (including one just moved into place by migrateLegacySingleHouseholdDb) —
+ * checked specifically, not "any household exists", so this still behaves
+ * correctly even if some other household happens to have been provisioned
+ * first.
+ */
+export function bootstrapFirstHousehold() {
+  if (listHouseholdSlugs().includes('household-1')) return;
 
   const options = loadOptions();
   const parents = [
@@ -46,11 +53,12 @@ export function bootstrapUsers() {
     return;
   }
 
+  const db = getHouseholdDb('household-1');
   const insert = db.prepare(
     `INSERT INTO users (username, display_name, password_hash) VALUES (?, ?, ?)`
   );
   for (const p of parents) {
     insert.run(p.username, p.displayName, hashPassword(p.password));
-    console.log(`Seeded account: ${p.username}`);
+    console.log(`Seeded account: ${p.username} (household-1)`);
   }
 }

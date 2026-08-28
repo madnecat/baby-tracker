@@ -6,10 +6,10 @@ export const milestonesRouter = Router();
 milestonesRouter.use(requireAuth);
 
 milestonesRouter.get('/completions', (req, res) => {
-  res.json(getMilestoneCompletions());
+  res.json(getMilestoneCompletions(req.db));
 });
 
 milestonesRouter.put('/completions/:key', (req, res) => {
-  setMilestoneCompletion(req.params.key, Boolean((req.body || {}).completed));
+  setMilestoneCompletion(req.db, req.params.key, Boolean((req.body || {}).completed));
   res.status(204).end();
 });
