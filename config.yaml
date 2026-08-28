@@ -1,0 +1,32 @@
+name: "Baby Tracker"
+version: "0.8.0"
+slug: "baby_tracker"
+description: "Private baby-care event tracker with WHO growth charts"
+arch:
+  - aarch64
+  - amd64
+init: false
+startup: application
+boot: auto
+ports:
+  8099/tcp: 8099
+ports_description:
+  8099/tcp: "Web UI (also reachable on the internal add-on network for Cloudflare Tunnel)"
+map:
+  - data:rw
+options:
+  parent1_username: "parent1"
+  parent1_password: ""
+  parent1_display_name: "Parent 1"
+  parent2_username: "parent2"
+  parent2_password: ""
+  parent2_display_name: "Parent 2"
+  session_secret: ""
+schema:
+  parent1_username: str
+  parent1_password: password
+  parent1_display_name: str
+  parent2_username: str
+  parent2_password: password
+  parent2_display_name: str
+  session_secret: password

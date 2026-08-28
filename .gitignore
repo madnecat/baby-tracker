@@ -1,0 +1,8 @@
+node_modules/
+web/dist/
+server/data-dev/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+**/*.local.md
