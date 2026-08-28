@@ -75,7 +75,7 @@ export default function MumPage() {
 
       <Section
         title="Contractions"
-        items={contractions.slice().reverse()}
+        items={contractions}
         isDark={isDark}
         onSelect={setEditing}
         emptyText="No contractions logged."
