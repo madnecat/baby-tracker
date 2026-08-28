@@ -23,12 +23,14 @@ function loadOptions() {
 
 /**
  * Seeds the very first household ("household-1") from the add-on's
- * Configuration options, but only on a genuinely fresh install — if any
- * household already exists (including one just moved into place by
- * migrateLegacySingleHouseholdDb), this does nothing.
+ * Configuration options, but only if household-1 doesn't already exist
+ * (including one just moved into place by migrateLegacySingleHouseholdDb) —
+ * checked specifically, not "any household exists", so this still behaves
+ * correctly even if some other household happens to have been provisioned
+ * first.
  */
 export function bootstrapFirstHousehold() {
-  if (listHouseholdSlugs().length > 0) return;
+  if (listHouseholdSlugs().includes('household-1')) return;
 
   const options = loadOptions();
   const parents = [

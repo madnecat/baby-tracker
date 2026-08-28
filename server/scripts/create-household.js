@@ -45,8 +45,16 @@ const parents = parentArgs.map((arg) => {
 });
 
 // Login has no household selector — it looks a username up across every
-// household database, so usernames must stay unique across all of them.
+// household database, so usernames must stay unique across all of them
+// (both against other households, and against each other in this command).
+const usernamesInThisBatch = new Set();
 for (const p of parents) {
+  if (usernamesInThisBatch.has(p.username)) {
+    console.error(`Username "${p.username}" is given more than once in this command.`);
+    process.exit(1);
+  }
+  usernamesInThisBatch.add(p.username);
+
   const existing = findHouseholdByUsername(p.username);
   if (existing) {
     console.error(`Username "${p.username}" is already used in household "${existing.slug}".`);

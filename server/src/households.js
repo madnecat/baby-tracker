@@ -55,17 +55,19 @@ export function listHouseholdSlugs() {
  * no rows are read, transformed, or re-inserted.
  *
  * Safe to interrupt at any point (container restart, crash, etc.) and rerun:
- * files are staged in a directory *outside* HOUSEHOLDS_DIR first, so
- * `listHouseholdSlugs()` — the guard against re-running — can't see it as
- * "done" until every file has actually been moved. The final step, renaming
- * that staging directory into place, is a single atomic filesystem operation
- * (same-filesystem directory rename), so there's no window where the
- * migration could be half-visible as complete.
+ * files are staged in a directory *outside* HOUSEHOLDS_DIR first, so the
+ * guard against re-running can't see it as "done" until every file has
+ * actually been moved. The final step, renaming that staging directory into
+ * place, is a single atomic filesystem operation (same-filesystem directory
+ * rename), so there's no window where the migration could be half-visible as
+ * complete. The guard checks specifically for household-1's own target
+ * directory — not "any household exists" — so this still runs correctly even
+ * if some other household was provisioned first.
  */
 export function migrateLegacySingleHouseholdDb() {
-  if (listHouseholdSlugs().length > 0) return; // already completed
-
   const targetDir = path.join(HOUSEHOLDS_DIR, 'household-1');
+  if (fs.existsSync(targetDir)) return; // already completed
+
   const stagingDir = path.join(DATA_DIR, '.household-1.migrating');
 
   if (!fs.existsSync(stagingDir)) {
