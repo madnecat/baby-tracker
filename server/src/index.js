@@ -2,8 +2,12 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { bootstrapUsers } from './bootstrap.js';
-import { purgeExpiredSessions } from './db.js';
+import { bootstrapFirstHousehold } from './bootstrap.js';
+import {
+  migrateLegacySingleHouseholdDb,
+  purgeExpiredSessionsEverywhere,
+  runMigrationsForAllHouseholds,
+} from './households.js';
 import { runMigrations } from './migrations.js';
 import { authRouter } from './routes/auth.js';
 import { eventsRouter } from './routes/events.js';
@@ -16,10 +20,11 @@ import { mountMcp } from './mcp.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 8099;
 
-runMigrations();
-bootstrapUsers();
-purgeExpiredSessions();
-setInterval(purgeExpiredSessions, 24 * 60 * 60 * 1000).unref();
+migrateLegacySingleHouseholdDb();
+bootstrapFirstHousehold();
+runMigrationsForAllHouseholds(runMigrations);
+purgeExpiredSessionsEverywhere();
+setInterval(purgeExpiredSessionsEverywhere, 24 * 60 * 60 * 1000).unref();
 
 const app = express();
 app.disable('x-powered-by');

@@ -1,5 +1,3 @@
-import { db } from './db.js';
-
 function serialize(row) {
   return {
     id: row.id,
@@ -13,21 +11,17 @@ function serialize(row) {
   };
 }
 
-export function listGrowthMeasurements() {
+export function listGrowthMeasurements(db) {
   return db
     .prepare(`SELECT * FROM growth_measurements ORDER BY measured_at ASC`)
     .all()
     .map(serialize);
 }
 
-export function createGrowthMeasurement({
-  measuredAt,
-  weightKg,
-  heightCm,
-  headCircumferenceCm,
-  notes,
-  createdBy,
-}) {
+export function createGrowthMeasurement(
+  db,
+  { measuredAt, weightKg, heightCm, headCircumferenceCm, notes, createdBy }
+) {
   if (!measuredAt) throw new Error('measuredAt is required');
   const result = db
     .prepare(
@@ -39,7 +33,11 @@ export function createGrowthMeasurement({
   return serialize(db.prepare(`SELECT * FROM growth_measurements WHERE id = ?`).get(result.lastInsertRowid));
 }
 
-export function updateGrowthMeasurement(id, { measuredAt, weightKg, heightCm, headCircumferenceCm, notes } = {}) {
+export function updateGrowthMeasurement(
+  db,
+  id,
+  { measuredAt, weightKg, heightCm, headCircumferenceCm, notes } = {}
+) {
   const existing = db.prepare(`SELECT * FROM growth_measurements WHERE id = ?`).get(id);
   if (!existing) throw new Error('Growth measurement not found');
   db.prepare(
@@ -57,6 +55,6 @@ export function updateGrowthMeasurement(id, { measuredAt, weightKg, heightCm, he
   return serialize(db.prepare(`SELECT * FROM growth_measurements WHERE id = ?`).get(id));
 }
 
-export function deleteGrowthMeasurement(id) {
+export function deleteGrowthMeasurement(db, id) {
   db.prepare(`DELETE FROM growth_measurements WHERE id = ?`).run(id);
 }

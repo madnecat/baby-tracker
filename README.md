@@ -13,9 +13,13 @@ Live at `https://baby.candelaresi.fr` (household-only, behind login).
   percentile curves
 - Milestones tracking
 - History and frequency charts to spot patterns over time
-- Two parent accounts (configurable usernames/passwords via add-on options)
+- Multi-household support: each household is a fully independent SQLite
+  database (its own parents, child, events, growth, milestones) — there is no
+  way for one household's data to be queried alongside another's. The first
+  household's parent accounts come from add-on options; additional households
+  are provisioned with `server/scripts/create-household.js`
 - An MCP server endpoint (`/mcp`, bearer-token auth) so tools like Claude can
-  query and log events directly
+  query and log events directly, scoped to the token's own household
 
 ## Stack
 
