@@ -2,7 +2,7 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { bootstrapFirstHousehold } from './bootstrap.js';
+import { bootstrapAdditionalHouseholds, bootstrapFirstHousehold } from './bootstrap.js';
 import {
   migrateLegacySingleHouseholdDb,
   purgeExpiredSessionsEverywhere,
@@ -22,6 +22,7 @@ const PORT = process.env.PORT || 8099;
 
 migrateLegacySingleHouseholdDb();
 bootstrapFirstHousehold();
+bootstrapAdditionalHouseholds();
 runMigrationsForAllHouseholds(runMigrations);
 purgeExpiredSessionsEverywhere();
 setInterval(purgeExpiredSessionsEverywhere, 24 * 60 * 60 * 1000).unref();

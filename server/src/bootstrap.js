@@ -1,6 +1,5 @@
 import fs from 'node:fs';
-import { hashPassword } from './auth.js';
-import { getHouseholdDb, listHouseholdSlugs } from './households.js';
+import { listHouseholdSlugs, provisionHousehold } from './households.js';
 
 function loadOptions() {
   const optionsPath = process.env.OPTIONS_PATH || '/data/options.json';
@@ -18,6 +17,13 @@ function loadOptions() {
     parent2_username: process.env.PARENT2_USERNAME,
     parent2_password: process.env.PARENT2_PASSWORD,
     parent2_display_name: process.env.PARENT2_DISPLAY_NAME,
+    household2_slug: process.env.HOUSEHOLD2_SLUG,
+    household2_parent1_username: process.env.HOUSEHOLD2_PARENT1_USERNAME,
+    household2_parent1_password: process.env.HOUSEHOLD2_PARENT1_PASSWORD,
+    household2_parent1_display_name: process.env.HOUSEHOLD2_PARENT1_DISPLAY_NAME,
+    household2_parent2_username: process.env.HOUSEHOLD2_PARENT2_USERNAME,
+    household2_parent2_password: process.env.HOUSEHOLD2_PARENT2_PASSWORD,
+    household2_parent2_display_name: process.env.HOUSEHOLD2_PARENT2_DISPLAY_NAME,
   };
 }
 
@@ -53,12 +59,42 @@ export function bootstrapFirstHousehold() {
     return;
   }
 
-  const db = getHouseholdDb('household-1');
-  const insert = db.prepare(
-    `INSERT INTO users (username, display_name, password_hash) VALUES (?, ?, ?)`
-  );
-  for (const p of parents) {
-    insert.run(p.username, p.displayName, hashPassword(p.password));
-    console.log(`Seeded account: ${p.username} (household-1)`);
+  provisionHousehold('household-1', parents);
+  for (const p of parents) console.log(`Seeded account: ${p.username} (household-1)`);
+}
+
+/**
+ * Provisions a second household from the add-on's Configuration options,
+ * when `household2_slug` is set — a convenience for onboarding one more
+ * family without needing shell access to the running container (which
+ * scripts/create-household.js requires). Idempotent: once a household with
+ * that slug exists, this does nothing on every later boot, so it's safe to
+ * leave the option filled in permanently.
+ */
+export function bootstrapAdditionalHouseholds() {
+  const options = loadOptions();
+  const slug = options.household2_slug;
+  if (!slug || listHouseholdSlugs().includes(slug)) return;
+
+  const parents = [
+    {
+      username: options.household2_parent1_username,
+      password: options.household2_parent1_password,
+      displayName: options.household2_parent1_display_name || options.household2_parent1_username,
+    },
+    {
+      username: options.household2_parent2_username,
+      password: options.household2_parent2_password,
+      displayName: options.household2_parent2_display_name || options.household2_parent2_username,
+    },
+  ].filter((p) => p.username && p.password);
+
+  if (parents.length === 0) return;
+
+  try {
+    provisionHousehold(slug, parents);
+    for (const p of parents) console.log(`Seeded account: ${p.username} (${slug})`);
+  } catch (e) {
+    console.error(`Could not provision household "${slug}": ${e.message}`);
   }
 }

@@ -22,6 +22,13 @@ options:
   parent2_password: ""
   parent2_display_name: "Parent 2"
   session_secret: ""
+  household2_slug: ""
+  household2_parent1_username: ""
+  household2_parent1_password: ""
+  household2_parent1_display_name: ""
+  household2_parent2_username: ""
+  household2_parent2_password: ""
+  household2_parent2_display_name: ""
 schema:
   parent1_username: str
   parent1_password: password
@@ -30,3 +37,10 @@ schema:
   parent2_password: password
   parent2_display_name: str
   session_secret: password
+  household2_slug: str?
+  household2_parent1_username: str?
+  household2_parent1_password: password?
+  household2_parent1_display_name: str?
+  household2_parent2_username: str?
+  household2_parent2_password: password?
+  household2_parent2_display_name: str?

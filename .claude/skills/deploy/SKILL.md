@@ -118,19 +118,35 @@ database, no `household_id` column anywhere. See `server/src/households.js`:
   (`fs.renameSync`, plus its `-wal`/`-shm` siblings), not a row-level
   migration, since the pre-multi-household database was already shaped
   exactly like one household. This runs once, guarded by "does
-  `households/` already have anything in it" — safe to leave in the codebase
-  permanently.
+  `households/household-1/` already exist" — safe to leave in the codebase
+  permanently. It also copies (never moves) the original aside first, as
+  `<name>.backup-pre-multihousehold`, purely as a zero-trust safety net.
 
-**Provisioning a new household** (e.g. onboarding another family) — run this
-on the Pi with the same `DB_PATH`/`DATA_DIR` the running add-on uses:
-```sh
-$PI_SSH "docker exec addon_local_baby_tracker node /app/server/scripts/create-household.js <slug> <username:password:displayName> [...]"
-```
-(The exact way to reach a shell inside the add-on's container hasn't been
-exercised yet as of this writing — confirm the container name via
-`$PI_SSH "docker ps"` first if `addon_local_baby_tracker` doesn't match.)
-Restarting the add-on afterwards isn't required — new households are picked
-up on the next login/token lookup without a restart.
+**Provisioning a new household** (e.g. onboarding another family) — **not**
+via `docker exec`: confirmed on the real Pi that the `core_ssh` add-on this
+skill SSHes through has neither a `docker` binary nor the Docker socket, so
+there is no way to get a shell inside the baby-tracker container from here
+(and no `ha` CLI subcommand for it either — checked `ha apps --help` and
+`ha --help` in full, nothing fits). Two options that actually work:
+
+1. **Config-driven (recommended, no shell access needed)**: `bootstrapAdditionalHouseholds()`
+   in `server/src/bootstrap.js` reads `household2_slug` +
+   `household2_parent{1,2}_{username,password,display_name}` from the add-on's
+   Configuration options (same mechanism as `parent1_username` etc. for
+   household-1) and provisions that household on boot if it doesn't exist yet
+   — idempotent, safe to leave filled in. Have the user fill those fields in
+   via the Home Assistant UI (Settings → Add-ons → Baby Tracker →
+   Configuration), then `$PI_SSH "ha apps restart local_baby_tracker"`. This
+   only supports one *additional* household today (`household2_*`) — if a
+   third is ever needed, extend `config.yaml`/`bootstrap.js` with a
+   `household3_*` set the same way, or revisit with something more general.
+2. **`scripts/create-household.js` directly**, if shell access inside the
+   container is ever available by some other means (e.g. a differently
+   configured SSH add-on with host/Docker access) — same idempotent
+   `provisionHousehold()` logic either way, just invoked differently.
+
+Restarting the add-on **is** required for the config-driven path (options are
+only read at boot); it is not required for direct script invocation.
 
 ## Database migrations
 

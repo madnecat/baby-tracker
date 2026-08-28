@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { hashPassword } from './auth.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const schemaSql = fs.readFileSync(path.join(__dirname, '..', 'schema.sql'), 'utf8');
@@ -99,6 +100,45 @@ export function migrateLegacySingleHouseholdDb() {
   fs.mkdirSync(HOUSEHOLDS_DIR, { recursive: true });
   fs.renameSync(stagingDir, targetDir);
   console.log(`Migrated legacy single-household database into ${targetDir}`);
+}
+
+/**
+ * Creates a new household with the given parent accounts. Shared by
+ * scripts/create-household.js and the config-driven boot-time provisioning
+ * in bootstrap.js, so both enforce the same rules: a valid slug, not already
+ * taken, and usernames that don't collide with each other or with any
+ * existing household (login has no household selector, so usernames must
+ * stay unique across all of them). Throws on any violation; creates nothing
+ * until all checks pass.
+ */
+export function provisionHousehold(slug, parents) {
+  if (!/^[a-z0-9-]+$/.test(slug)) {
+    throw new Error('slug must contain only lowercase letters, digits, and dashes.');
+  }
+  if (listHouseholdSlugs().includes(slug)) {
+    throw new Error(`Household "${slug}" already exists.`);
+  }
+
+  const usernamesInThisBatch = new Set();
+  for (const p of parents) {
+    if (usernamesInThisBatch.has(p.username)) {
+      throw new Error(`Username "${p.username}" is given more than once.`);
+    }
+    usernamesInThisBatch.add(p.username);
+
+    const existing = findHouseholdByUsername(p.username);
+    if (existing) {
+      throw new Error(`Username "${p.username}" is already used in household "${existing.slug}".`);
+    }
+  }
+
+  const db = getHouseholdDb(slug);
+  const insert = db.prepare(
+    `INSERT INTO users (username, display_name, password_hash) VALUES (?, ?, ?)`
+  );
+  for (const p of parents) {
+    insert.run(p.username, p.displayName, hashPassword(p.password));
+  }
 }
 
 function allHouseholdDbs() {
