@@ -1,5 +1,5 @@
 name: "Baby Tracker"
-version: "0.9.0"
+version: "0.9.1"
 slug: "baby_tracker"
 description: "Private baby-care event tracker with WHO growth charts"
 arch:
