@@ -63,6 +63,11 @@ export function listHouseholdSlugs() {
  * complete. The guard checks specifically for household-1's own target
  * directory — not "any household exists" — so this still runs correctly even
  * if some other household was provisioned first.
+ *
+ * Before touching anything, it also *copies* (never moves) the untouched
+ * original next to itself as `<name>.backup-pre-multihousehold` — a
+ * zero-trust safety net that exists on disk regardless of whether anything
+ * else in this function, or in the rest of the app, turns out to be wrong.
  */
 export function migrateLegacySingleHouseholdDb() {
   const targetDir = path.join(HOUSEHOLDS_DIR, 'household-1');
@@ -72,6 +77,14 @@ export function migrateLegacySingleHouseholdDb() {
 
   if (!fs.existsSync(stagingDir)) {
     if (!fs.existsSync(LEGACY_DB_PATH)) return; // fresh install, nothing to migrate
+
+    for (const suffix of ['', '-wal', '-shm']) {
+      const from = `${LEGACY_DB_PATH}${suffix}`;
+      if (fs.existsSync(from)) {
+        fs.copyFileSync(from, `${from}.backup-pre-multihousehold`);
+      }
+    }
+
     fs.mkdirSync(stagingDir, { recursive: true });
   }
 
