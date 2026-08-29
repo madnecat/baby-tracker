@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { listHouseholdSlugs, provisionHousehold } from './households.js';
+import { listHouseholdSlugs, provisionHousehold, reconcileHouseholdUsernames } from './households.js';
 
 function loadOptions() {
   const optionsPath = process.env.OPTIONS_PATH || '/data/options.json';
@@ -67,14 +67,16 @@ export function bootstrapFirstHousehold() {
  * Provisions a second household from the add-on's Configuration options,
  * when `household2_slug` is set — a convenience for onboarding one more
  * family without needing shell access to the running container (which
- * scripts/create-household.js requires). Idempotent: once a household with
- * that slug exists, this does nothing on every later boot, so it's safe to
- * leave the option filled in permanently.
+ * scripts/create-household.js requires). Provisioning itself is one-time
+ * (once a household with that slug exists, it's never re-created), but on
+ * every later boot this also reconciles usernames against the current
+ * config, so fixing a typo in the add-on's Configuration UI and restarting
+ * actually takes effect instead of being silently ignored.
  */
 export function bootstrapAdditionalHouseholds() {
   const options = loadOptions();
   const slug = options.household2_slug;
-  if (!slug || listHouseholdSlugs().includes(slug)) return;
+  if (!slug) return;
 
   const parents = [
     {
@@ -90,6 +92,11 @@ export function bootstrapAdditionalHouseholds() {
   ].filter((p) => p.username && p.password);
 
   if (parents.length === 0) return;
+
+  if (listHouseholdSlugs().includes(slug)) {
+    reconcileHouseholdUsernames(slug, parents);
+    return;
+  }
 
   try {
     provisionHousehold(slug, parents);

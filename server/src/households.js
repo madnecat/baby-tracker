@@ -141,6 +141,41 @@ export function provisionHousehold(slug, parents) {
   }
 }
 
+/**
+ * Fixes up an already-provisioned household's usernames to match its current
+ * Configuration options — needed because provisionHousehold() only ever runs
+ * once per household (guarded by "does this slug already exist"), so fixing
+ * a typo in the add-on's `household2_parent{1,2}_username` field and
+ * restarting otherwise has no effect on the already-seeded account.
+ *
+ * There's no `household_id`/slot column identifying "this row is parent1",
+ * so existing users are matched to configured parents by creation order
+ * (oldest account = parent1, next = parent2, ...) — the same order
+ * provisionHousehold() always inserts them in. Only touches `username`:
+ * never display_name or password_hash, so it can't silently undo a password
+ * a parent changed themselves via Settings (PATCH /auth/password).
+ */
+export function reconcileHouseholdUsernames(slug, parents) {
+  const db = getHouseholdDb(slug);
+  const existing = db.prepare(`SELECT id, username FROM users ORDER BY id ASC`).all();
+
+  parents.forEach((p, i) => {
+    const row = existing[i];
+    if (!row || row.username === p.username) return;
+
+    const collision = findHouseholdByUsername(p.username);
+    if (collision) {
+      console.error(
+        `Could not rename "${row.username}" to "${p.username}" in household "${slug}": username already used in household "${collision.slug}".`
+      );
+      return;
+    }
+
+    db.prepare(`UPDATE users SET username = ? WHERE id = ?`).run(p.username, row.id);
+    console.log(`Renamed account in household "${slug}": "${row.username}" -> "${p.username}"`);
+  });
+}
+
 function allHouseholdDbs() {
   return listHouseholdSlugs().map((slug) => ({ slug, db: getHouseholdDb(slug) }));
 }
