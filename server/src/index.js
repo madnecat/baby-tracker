@@ -15,6 +15,7 @@ import { growthRouter } from './routes/growth.js';
 import { childRouter } from './routes/child.js';
 import { milestonesRouter } from './routes/milestones.js';
 import { apiTokensRouter } from './routes/apiTokens.js';
+import { settingsRouter } from './routes/settings.js';
 import { mountMcp } from './mcp.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -38,6 +39,7 @@ app.use('/api/growth', growthRouter);
 app.use('/api/child', childRouter);
 app.use('/api/milestones', milestonesRouter);
 app.use('/api/tokens', apiTokensRouter);
+app.use('/api/settings', settingsRouter);
 mountMcp(app);
 
 const webDist = path.join(__dirname, '..', '..', 'web', 'dist');

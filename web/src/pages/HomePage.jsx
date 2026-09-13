@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { EventTile } from '../components/EventTile.jsx';
 import { TimerTile } from '../components/TimerTile.jsx';
 import { OutingTile } from '../components/OutingTile.jsx';
@@ -10,7 +10,7 @@ import { MedicationSheet } from '../components/MedicationSheet.jsx';
 import { GrowthSheet } from '../components/GrowthSheet.jsx';
 import { api } from '../api/client.js';
 import { EVENT_COLORS } from '../lib/palette.js';
-import { MEDICATION_PRESETS } from '../lib/medications.js';
+import { MEDICATION_PRESETS, getCustomPresets } from '../lib/medications.js';
 
 export default function HomePage() {
   const [subject, setSubject] = useState('baby');
@@ -23,6 +23,8 @@ export default function HomePage() {
   }
 
   useEffect(loadMedicationEvents, []);
+
+  const customPresets = useMemo(() => getCustomPresets(medicationEvents), [medicationEvents]);
 
   function showToast(message) {
     setToast(message);
@@ -94,6 +96,17 @@ export default function HomePage() {
           onChange={() => showToast('Contraction updated')}
         />
         {MEDICATION_PRESETS.map((preset) => (
+          <MedicationTile
+            key={preset.key}
+            preset={preset}
+            medicationEvents={medicationEvents}
+            onLogged={() => {
+              loadMedicationEvents();
+              showToast(`${preset.name} logged`);
+            }}
+          />
+        ))}
+        {customPresets.map((preset) => (
           <MedicationTile
             key={preset.key}
             preset={preset}

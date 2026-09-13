@@ -14,7 +14,12 @@ function fromLocalInputValue(value) {
   return value ? new Date(value).toISOString() : null;
 }
 
+// These events happen at a single moment (startedAt === endedAt always) — unlike
+// breastfeeding/outing/contraction/sleep, which genuinely run over a duration.
+const INSTANT_TYPES = ['diaper', 'bottle', 'temperature', 'medication'];
+
 export function EditEventSheet({ event, onClose, onSaved, onDeleted }) {
+  const isInstant = INSTANT_TYPES.includes(event.type);
   const [startedAt, setStartedAt] = useState(toLocalInputValue(event.startedAt));
   const [endedAt, setEndedAt] = useState(toLocalInputValue(event.endedAt));
   const [details, setDetails] = useState(event.details || {});
@@ -31,7 +36,7 @@ export function EditEventSheet({ event, onClose, onSaved, onDeleted }) {
     try {
       await api.updateEvent(event.id, {
         startedAt: fromLocalInputValue(startedAt),
-        endedAt: fromLocalInputValue(endedAt),
+        endedAt: isInstant ? fromLocalInputValue(startedAt) : fromLocalInputValue(endedAt),
         details,
       });
       onSaved();
@@ -55,13 +60,15 @@ export function EditEventSheet({ event, onClose, onSaved, onDeleted }) {
   return (
     <Sheet title={`Edit ${event.type}`} onClose={onClose}>
       <div className="field">
-        <label>Started at</label>
+        <label>{isInstant ? 'Date & time' : 'Started at'}</label>
         <input type="datetime-local" value={startedAt} onChange={(e) => setStartedAt(e.target.value)} />
       </div>
-      <div className="field">
-        <label>Ended at</label>
-        <input type="datetime-local" value={endedAt} onChange={(e) => setEndedAt(e.target.value)} />
-      </div>
+      {!isInstant && (
+        <div className="field">
+          <label>Ended at</label>
+          <input type="datetime-local" value={endedAt} onChange={(e) => setEndedAt(e.target.value)} />
+        </div>
+      )}
 
       {event.type === 'diaper' && (
         <>

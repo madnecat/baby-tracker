@@ -4,7 +4,13 @@ import { EditEventSheet } from '../components/EditEventSheet.jsx';
 import { ContractionChart } from '../components/ContractionChart.jsx';
 import { EVENT_COLORS, resolve as resolveColor } from '../lib/palette.js';
 import { useColorScheme } from '../lib/useColorScheme.js';
-import { formatDateTime, formatDuration } from '../lib/dateUtils.js';
+import { formatDateTime, formatDuration, dayKey } from '../lib/dateUtils.js';
+import {
+  getMedicationStatus,
+  lastDoseFor,
+  loggedMedicationNames,
+  nextDoseInfo,
+} from '../lib/medications.js';
 
 function summarize(event) {
   const d = event.details || {};
@@ -20,10 +26,13 @@ function summarize(event) {
   }
 }
 
-function Section({ title, items, isDark, onSelect, emptyText }) {
+function Section({ title, items, isDark, onSelect, emptyText, action }) {
   return (
     <>
-      <h2 className="section-title">{title}</h2>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <h2 className="section-title">{title}</h2>
+        {action}
+      </div>
       {items.length === 0 && <div className="empty-state">{emptyText}</div>}
       {items.map((event) => (
         <div className="history-item" key={event.id} onClick={() => onSelect(event)}>
@@ -38,10 +47,106 @@ function Section({ title, items, isDark, onSelect, emptyText }) {
   );
 }
 
+function MedicationStatusList({ names, lastDoseByName, isDark }) {
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 30000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <>
+      <h2 className="section-title">Medication status</h2>
+      {names.length === 0 && <div className="empty-state">No medication logged yet.</div>}
+      {names.map((name) => {
+        const status = getMedicationStatus(lastDoseByName.get(name));
+        return (
+          <div className="history-item static" key={name}>
+            <span className="dot" style={{ background: resolveColor(EVENT_COLORS.medication, isDark) }} />
+            <div className="details">
+              <div>{name}</div>
+              <div className="time">{status.sub}</div>
+            </div>
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
+function MedicationHistory({ medications, names, lastDoseByName, isDark, onSelect }) {
+  const [nameFilter, setNameFilter] = useState(null);
+
+  useEffect(() => {
+    if (nameFilter && !names.includes(nameFilter)) setNameFilter(null);
+  }, [nameFilter, names]);
+
+  const filtered = useMemo(
+    () => (nameFilter ? medications.filter((e) => e.details?.name === nameFilter) : medications),
+    [medications, nameFilter]
+  );
+
+  // `filtered` is already newest-first (inherited from medications, which the API returns
+  // ordered by started_at DESC — the same invariant lastDoseFor relies on), so no re-sort needed.
+  const groups = useMemo(() => {
+    const map = new Map();
+    for (const item of filtered) {
+      const key = dayKey(item.startedAt);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(item);
+    }
+    return [...map.entries()];
+  }, [filtered]);
+
+  return (
+    <>
+      <h2 className="section-title">Medication history</h2>
+      <div className="filter-chips">
+        <button className={`chip${!nameFilter ? ' active' : ''}`} onClick={() => setNameFilter(null)}>
+          All
+        </button>
+        {names.map((n) => (
+          <button
+            key={n}
+            className={`chip${nameFilter === n ? ' active' : ''}`}
+            onClick={() => setNameFilter(n)}
+          >
+            {n}
+          </button>
+        ))}
+      </div>
+
+      {groups.length === 0 && <div className="empty-state">No medication logged yet.</div>}
+
+      {groups.map(([day, items]) => (
+        <div className="history-day" key={day}>
+          <h3>{day}</h3>
+          {items.map((event) => {
+            const next = nextDoseInfo(event);
+            const isLatestForName = lastDoseByName.get(event.details?.name)?.id === event.id;
+            return (
+              <div className="history-item" key={event.id} onClick={() => onSelect(event)}>
+                <span className="dot" style={{ background: resolveColor(EVENT_COLORS.medication, isDark) }} />
+                <div className="details">
+                  <div>{summarize(event)}</div>
+                  <div className="time">{formatDateTime(event.startedAt)}</div>
+                  {isLatestForName && next && <div className="time">{next.label}</div>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </>
+  );
+}
+
 export default function MumPage() {
   const [events, setEvents] = useState([]);
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [hideContractions, setHideContractions] = useState(false);
   const isDark = useColorScheme();
 
   function load() {
@@ -53,6 +158,18 @@ export default function MumPage() {
   }
 
   useEffect(load, []);
+  useEffect(() => {
+    api
+      .getSettings()
+      .then((s) => setHideContractions(s.hideContractions))
+      .catch(() => {});
+  }, []);
+
+  function toggleContractions() {
+    const next = !hideContractions;
+    setHideContractions(next);
+    api.updateSettings({ hideContractions: next }).catch(() => setHideContractions(!next));
+  }
 
   const contractions = useMemo(() => events.filter((e) => e.type === 'contraction'), [events]);
   const recentContractions = useMemo(() => {
@@ -60,6 +177,11 @@ export default function MumPage() {
     return contractions.filter((c) => new Date(c.startedAt).getTime() >= cutoff);
   }, [contractions]);
   const medications = useMemo(() => events.filter((e) => e.type === 'medication'), [events]);
+  const medicationNames = useMemo(() => loggedMedicationNames(medications), [medications]);
+  const lastDoseByName = useMemo(
+    () => new Map(medicationNames.map((name) => [name, lastDoseFor(medications, name)])),
+    [medications, medicationNames]
+  );
   const temperatures = useMemo(
     () => events.filter((e) => e.type === 'temperature' && e.details?.who === 'mom'),
     [events]
@@ -71,21 +193,27 @@ export default function MumPage() {
     <div>
       <h1 className="page-title">Mum</h1>
 
-      <ContractionChart contractions={recentContractions} />
+      {!hideContractions && <ContractionChart contractions={recentContractions} />}
 
       <Section
         title="Contractions"
-        items={contractions}
+        items={hideContractions ? [] : contractions}
         isDark={isDark}
         onSelect={setEditing}
-        emptyText="No contractions logged."
+        emptyText={hideContractions ? 'Contractions hidden.' : 'No contractions logged.'}
+        action={
+          <button className="chip" onClick={toggleContractions}>
+            {hideContractions ? 'Show' : 'Hide'}
+          </button>
+        }
       />
-      <Section
-        title="Medication"
-        items={medications.slice().reverse()}
+      <MedicationStatusList names={medicationNames} lastDoseByName={lastDoseByName} isDark={isDark} />
+      <MedicationHistory
+        medications={medications}
+        names={medicationNames}
+        lastDoseByName={lastDoseByName}
         isDark={isDark}
         onSelect={setEditing}
-        emptyText="No medication logged."
       />
       <Section
         title="Temperature"

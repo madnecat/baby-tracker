@@ -49,6 +49,11 @@ CREATE TABLE IF NOT EXISTS milestone_completions (
   completed_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS settings (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  hide_contractions INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS growth_measurements (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   measured_at TEXT NOT NULL,

@@ -360,6 +360,10 @@ textarea {
   cursor: pointer;
 }
 
+.history-item.static {
+  cursor: default;
+}
+
 .history-item .dot {
   width: 10px;
   height: 10px;

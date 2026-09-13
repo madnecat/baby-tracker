@@ -48,6 +48,10 @@ export const api = {
   getChild: () => request('/child'),
   putChild: (child) => request('/child', { method: 'PUT', body: JSON.stringify(child) }),
 
+  getSettings: () => request('/settings'),
+  updateSettings: (patch) =>
+    request('/settings', { method: 'PATCH', body: JSON.stringify(patch) }),
+
   milestoneCompletions: () => request('/milestones/completions'),
   setMilestoneCompletion: (key, completed) =>
     request(`/milestones/completions/${encodeURIComponent(key)}`, {
