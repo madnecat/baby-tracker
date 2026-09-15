@@ -75,6 +75,23 @@ substituting the values from that file. Every command below uses `$PI_SSH`.
    `server/src/mcp.js` yourself rather than trusting a remembered number here
    — it grows over time and this doc won't always be updated in lockstep.)
 
+## Rolling back
+
+Before any risky deploy, take a partial backup of just this add-on (config +
+`/data`, i.e. every household DB):
+`$PI_SSH "ha backups new --addons local_baby_tracker --name 'baby-tracker pre-<version>'"`.
+
+- **Code only** (data is fine, new version misbehaves): check out the previous
+  commit, set `config.yaml`'s version to a *new* higher number (Supervisor
+  only updates when the version changes), sync + update as usual. An option
+  that's no longer in the schema (e.g. `households` when rolling back past
+  0.10.0) doesn't block startup — Supervisor drops unknown options with a
+  warning (`supervisor/apps/options.py`, "does not exist in the schema").
+- **Data too**: `$PI_SSH "ha backups list"`, then
+  `$PI_SSH "ha backups restore <slug> --addons local_baby_tracker"` —
+  restores that add-on's config and `/data` only, leaving the rest of Home
+  Assistant untouched. Anything logged in the app after the backup is lost.
+
 ## Testing locally before every non-trivial deploy
 
 Run the server directly (not Docker — same Node version issues would show up
@@ -129,17 +146,42 @@ there is no way to get a shell inside the baby-tracker container from here
 (and no `ha` CLI subcommand for it either — checked `ha apps --help` and
 `ha --help` in full, nothing fits). Two options that actually work:
 
-1. **Config-driven (recommended, no shell access needed)**: `bootstrapAdditionalHouseholds()`
-   in `server/src/bootstrap.js` reads `household2_slug` +
-   `household2_parent{1,2}_{username,password,display_name}` from the add-on's
-   Configuration options (same mechanism as `parent1_username` etc. for
-   household-1) and provisions that household on boot if it doesn't exist yet
-   — idempotent, safe to leave filled in. Have the user fill those fields in
-   via the Home Assistant UI (Settings → Add-ons → Baby Tracker →
-   Configuration), then `$PI_SSH "ha apps restart local_baby_tracker"`. This
-   only supports one *additional* household today (`household2_*`) — if a
-   third is ever needed, extend `config.yaml`/`bootstrap.js` with a
-   `household3_*` set the same way, or revisit with something more general.
+1. **Config-driven via the `households` list (recommended, no shell access
+   needed)**: add an entry (slug + parent1, optionally parent2) to the
+   **households** list in the Home Assistant UI (Settings → Add-ons → Baby
+   Tracker → Configuration), save, then `$PI_SSH "ha apps restart local_baby_tracker"`.
+   `bootstrapListedHouseholds()` in `server/src/bootstrap.js` handles any
+   number of entries; there's no need to add `household3_*`-style fields.
+   Rules (see `syncConfigListHousehold()` in `server/src/households.js`):
+   - A household created from the list gets a `config-list-household.json`
+     marker in its folder, recording which user id is parent1/parent2. Entries
+     can only ever touch households carrying that marker — a slug matching
+     household-1, household2, or anything made by `create-household.js` is
+     refused and logged, never reconciled.
+   - On later boots: a changed username is renamed in its own slot; a parent
+     filled in later gets an account created. Passwords and display names in
+     the config are only used at account creation (parents change their own
+     password in the app's Settings).
+   - Removing an entry does **not** delete or disable the household — its
+     parents can still log in (a warning is logged at boot). Its slug is then
+     flagged in the marker: re-adding it only works with its previous
+     usernames, so a removed family's slug can't be reused for a different
+     family (that would rename their accounts). Use a new slug instead.
+   - Each entry is independent: a bad one (empty/invalid/duplicate slug,
+     username already used elsewhere) is ignored and logged — mostly as
+     `Skipping "households" entry ...`, while a failed rename/creation on an
+     existing list household logs `Could not rename/create ...`. Check
+     `ha apps logs local_baby_tracker` after the restart.
+   - No account is created or renamed (list, household2, or
+     `create-household.js`) while any household's database can't be opened,
+     since username uniqueness couldn't be checked. A household that fails to
+     open or migrate at boot is left out (its parents can't log in) until the
+     add-on restarts; the others keep working.
+
+   The older fixed `household2_slug` + `household2_parent{1,2}_*` options
+   still work exactly as before — keep those fields as they are for the
+   household already created through them; don't move it into the list (its
+   slug would be refused, since it has no list marker).
 2. **`scripts/create-household.js` directly**, if shell access inside the
    container is ever available by some other means (e.g. a differently
    configured SSH add-on with host/Docker access) — same idempotent

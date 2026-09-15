@@ -1,5 +1,5 @@
 name: "Baby Tracker"
-version: "0.9.3"
+version: "0.10.0"
 slug: "baby_tracker"
 description: "Private baby-care event tracker with WHO growth charts"
 arch:
@@ -29,6 +29,7 @@ options:
   household2_parent2_username: ""
   household2_parent2_password: ""
   household2_parent2_display_name: ""
+  households: []
 schema:
   parent1_username: str
   parent1_password: password
@@ -44,3 +45,11 @@ schema:
   household2_parent2_username: str?
   household2_parent2_password: password?
   household2_parent2_display_name: str?
+  households:
+    - slug: str
+      parent1_username: str
+      parent1_password: password
+      parent1_display_name: str?
+      parent2_username: str?
+      parent2_password: password?
+      parent2_display_name: str?
