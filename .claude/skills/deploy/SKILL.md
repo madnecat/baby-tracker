@@ -79,7 +79,7 @@ substituting the values from that file. Every command below uses `$PI_SSH`.
 
 Before any risky deploy, take a partial backup of just this add-on (config +
 `/data`, i.e. every household DB):
-`$PI_SSH "ha backups new --addons local_baby_tracker --name 'baby-tracker pre-<version>'"`.
+`$PI_SSH "ha apps stop local_baby_tracker && ha backups new --app local_baby_tracker --name 'baby-tracker pre-<version>'; ha apps start local_baby_tracker"`.
 
 - **Code only** (data is fine, new version misbehaves): check out the previous
   commit, set `config.yaml`'s version to a *new* higher number (Supervisor
@@ -88,7 +88,7 @@ Before any risky deploy, take a partial backup of just this add-on (config +
   0.10.0) doesn't block startup — Supervisor drops unknown options with a
   warning (`supervisor/apps/options.py`, "does not exist in the schema").
 - **Data too**: `$PI_SSH "ha backups list"`, then
-  `$PI_SSH "ha backups restore <slug> --addons local_baby_tracker"` —
+  `$PI_SSH "ha backups restore <slug> --app local_baby_tracker --homeassistant=false"` —
   restores that add-on's config and `/data` only, leaving the rest of Home
   Assistant untouched. Anything logged in the app after the backup is lost.
 
