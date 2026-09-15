@@ -17,7 +17,8 @@ Live at `https://baby.candelaresi.fr` (household-only, behind login).
   database (its own parents, child, events, growth, milestones) — there is no
   way for one household's data to be queried alongside another's. The first
   household's parent accounts come from add-on options; additional households
-  are provisioned with `server/scripts/create-household.js`
+  are declared in the add-on's `households` list option (any number, created
+  at boot), or provisioned with `server/scripts/create-household.js`
 - An MCP server endpoint (`/mcp`, bearer-token auth) so tools like Claude can
   query and log events directly, scoped to the token's own household
 
