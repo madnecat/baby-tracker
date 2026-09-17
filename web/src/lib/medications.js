@@ -3,7 +3,8 @@ import { formatDateTime } from './dateUtils.js';
 // Standard adult dosing intervals from NHS-published sources. Not medical advice —
 // always follow your own prescription or the packet instructions instead if they differ.
 export const MEDICATION_PRESETS = [
-  { key: 'paracetamol', name: 'Paracetamol', doseAmount: 1, doseUnit: 'g', intervalHours: 4 },
+  // NHS allows 1g every 4-6h (max 4g/24h); 6h is the spacing this household was told to use.
+  { key: 'paracetamol', name: 'Paracetamol', doseAmount: 1, doseUnit: 'g', intervalHours: 6 },
   { key: 'ibuprofen', name: 'Ibuprofen', doseAmount: 400, doseUnit: 'mg', intervalHours: 6 },
   {
     key: 'diclofenac',

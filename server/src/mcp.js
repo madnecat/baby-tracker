@@ -221,7 +221,7 @@ function buildServer(ctx) {
     'log_medication',
     {
       description:
-        'Log a medication dose taken by mum. name is required — ask if unclear. For intervalHours, use the correct standard spacing if you know the medication (e.g. paracetamol 4h, ibuprofen 6h) rather than the generic 6h default — and if you are not confident of the correct interval, ask the user instead of guessing, since this drives the "safe to take again" timing shown in the app.',
+        'Log a medication dose taken by mum. name is required — ask if unclear. For intervalHours, use the correct standard spacing if you know the medication (e.g. paracetamol 6h, ibuprofen 6h) rather than the generic 6h default — and if you are not confident of the correct interval, ask the user instead of guessing, since this drives the "safe to take again" timing shown in the app.',
       inputSchema: z.object({
         name: z.string(),
         doseAmount: z.number().optional(),

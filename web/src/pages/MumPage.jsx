@@ -47,6 +47,58 @@ function Section({ title, items, isDark, onSelect, emptyText, action }) {
   );
 }
 
+function ContractionHistory({ contractions, hidden, isDark, onSelect, onToggle }) {
+  // `contractions` is newest-first (the API returns events ordered by started_at DESC), so the
+  // *previous* contraction of item i is i+1 — the gap is start-to-start, the way contractions
+  // are timed clinically. Gaps are computed before grouping so the first item of a day still
+  // shows its gap to the last one of the day before.
+  const groups = useMemo(() => {
+    const map = new Map();
+    contractions.forEach((event, i) => {
+      const previous = contractions[i + 1];
+      const key = dayKey(event.startedAt);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push({ event, previous });
+    });
+    return [...map.entries()];
+  }, [contractions]);
+
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <h2 className="section-title">Contraction events</h2>
+        <button className="chip" onClick={onToggle}>
+          {hidden ? 'Show' : 'Hide'}
+        </button>
+      </div>
+
+      {hidden && <div className="empty-state">Contractions hidden.</div>}
+      {!hidden && groups.length === 0 && <div className="empty-state">No contractions logged.</div>}
+
+      {!hidden &&
+        groups.map(([day, items]) => (
+          <div className="history-day" key={day}>
+            <h3>{day}</h3>
+            {items.map(({ event, previous }) => (
+              <div className="history-item" key={event.id} onClick={() => onSelect(event)}>
+                <span className="dot" style={{ background: resolveColor(EVENT_COLORS.contraction, isDark) }} />
+                <div className="details">
+                  <div>{summarize(event)}</div>
+                  <div className="time">{formatDateTime(event.startedAt)}</div>
+                  {previous && (
+                    <div className="time">
+                      {formatDuration(previous.startedAt, event.startedAt)} after previous
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
+    </>
+  );
+}
+
 function MedicationStatusList({ names, lastDoseByName, isDark }) {
   const [, setTick] = useState(0);
 
@@ -172,10 +224,6 @@ export default function MumPage() {
   }
 
   const contractions = useMemo(() => events.filter((e) => e.type === 'contraction'), [events]);
-  const recentContractions = useMemo(() => {
-    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-    return contractions.filter((c) => new Date(c.startedAt).getTime() >= cutoff);
-  }, [contractions]);
   const medications = useMemo(() => events.filter((e) => e.type === 'medication'), [events]);
   const medicationNames = useMemo(() => loggedMedicationNames(medications), [medications]);
   const lastDoseByName = useMemo(
@@ -193,19 +241,14 @@ export default function MumPage() {
     <div>
       <h1 className="page-title">Mum</h1>
 
-      {!hideContractions && <ContractionChart contractions={recentContractions} />}
+      {!hideContractions && <ContractionChart contractions={contractions} />}
 
-      <Section
-        title="Contractions"
-        items={hideContractions ? [] : contractions}
+      <ContractionHistory
+        contractions={contractions}
+        hidden={hideContractions}
         isDark={isDark}
         onSelect={setEditing}
-        emptyText={hideContractions ? 'Contractions hidden.' : 'No contractions logged.'}
-        action={
-          <button className="chip" onClick={toggleContractions}>
-            {hideContractions ? 'Show' : 'Hide'}
-          </button>
-        }
+        onToggle={toggleContractions}
       />
       <MedicationStatusList names={medicationNames} lastDoseByName={lastDoseByName} isDark={isDark} />
       <MedicationHistory
