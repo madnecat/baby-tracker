@@ -140,7 +140,11 @@ export function NextSleepCard({ events, child, loading, error }) {
             <Line muted>
               {state === 'overdue'
                 ? `Expected around ${formatClock(prediction.point)} — she may settle more easily now.`
-                : `In about ${formatGap(prediction.point - now)}`}
+                : prediction.point <= now
+                  ? // Inside the window but past its midpoint: "In about 0 min" is a silly way to
+                    // say the moment has arrived.
+                    'Any time now'
+                  : `In about ${formatGap(prediction.point - now)}`}
             </Line>
           </>
         )}

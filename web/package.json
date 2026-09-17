@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test"
+    "test": "node --test",
+    "check:render": "node scripts/run-render-check.js"
   },
   "dependencies": {
     "date-fns": "^3.6.0",

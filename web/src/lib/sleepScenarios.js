@@ -57,7 +57,7 @@ export const SLEEP_SCENARIOS = {
       'Card footer: "No day/night rhythm yet — sleeps around the clock"',
       'Card: "Based on N of her own wake windows"',
       'Charts: Sleep section with a 24h band, wake windows listed below it',
-      'No warning banners at all',
+      'No warning banner on the card (the Charts list may still flag the odd long gap)',
     ],
     build: (now) =>
       endingAwakeFor(
@@ -363,11 +363,17 @@ export const SLEEP_SCENARIOS = {
   },
 };
 
-/** The child profile a scenario expects, so the seeder and the tests agree on her age. */
+/**
+ * The child profile a scenario expects, so the seeder and the tests agree on her age.
+ *
+ * The date of birth is date-only, exactly as the server stores it. Carrying a time of day here
+ * would put a child of exactly N weeks a few milliseconds short of the boundary, and the card would
+ * render "Typical at N-1 weeks" — a confusing thing to chase down in a fixture.
+ */
 export function scenarioChild(name, now) {
   return {
     name: 'Fixture',
-    dateOfBirth: dobForAgeWeeks(SLEEP_SCENARIOS[name].ageWeeks, now),
+    dateOfBirth: dobForAgeWeeks(SLEEP_SCENARIOS[name].ageWeeks, now).slice(0, 10),
     sex: 'female',
   };
 }
