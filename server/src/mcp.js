@@ -137,10 +137,16 @@ function buildServer(ctx) {
     'log_sleep',
     {
       description: 'Log a completed sleep session for the baby (use for retroactive/past sleeps).',
-      inputSchema: z.object({
-        startedAt: z.string().datetime(),
-        endedAt: z.string().datetime(),
-      }),
+      // A mistyped retroactive log (endedAt before startedAt) would otherwise insert a
+      // negative-duration sleep, which the sleep engine then has to throw away silently.
+      inputSchema: z
+        .object({
+          startedAt: z.string().datetime(),
+          endedAt: z.string().datetime(),
+        })
+        .refine((v) => new Date(v.endedAt) > new Date(v.startedAt), {
+          message: 'endedAt must be after startedAt',
+        }),
     },
     async ({ startedAt, endedAt }) => {
       const event = createEvent(db, { type: 'sleep', startedAt, endedAt, details: {}, createdBy: userId });

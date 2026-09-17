@@ -7,6 +7,7 @@ import { MedicationTile } from '../components/MedicationTile.jsx';
 import { DiaperSheet } from '../components/DiaperSheet.jsx';
 import { TemperatureSheet } from '../components/TemperatureSheet.jsx';
 import { MedicationSheet } from '../components/MedicationSheet.jsx';
+import { NextSleepCard } from '../components/NextSleepCard.jsx';
 import { GrowthSheet } from '../components/GrowthSheet.jsx';
 import { api } from '../api/client.js';
 import { EVENT_COLORS } from '../lib/palette.js';
@@ -17,12 +18,43 @@ export default function HomePage() {
   const [openSheet, setOpenSheet] = useState(null);
   const [toast, setToast] = useState(null);
   const [medicationEvents, setMedicationEvents] = useState([]);
+  const [recentEvents, setRecentEvents] = useState([]);
+  const [child, setChild] = useState(undefined);
+  const [sleepLoading, setSleepLoading] = useState(true);
+  const [sleepError, setSleepError] = useState(false);
 
   function loadMedicationEvents() {
     api.listEvents({ type: 'medication' }).then(setMedicationEvents);
   }
 
+  /**
+   * One request, and deliberately not filtered by type: the sleep card's missing-log audit
+   * corroborates long wake windows against feeds and nappy changes, so it needs those too. The
+   * 22-day span covers the phase engine's 14-day hysteresis window with room to spare while
+   * keeping the most-opened screen in the app off a full-history download.
+   */
+  function loadRecentEvents() {
+    const from = new Date(Date.now() - 22 * 86400000).toISOString();
+    api
+      .listEvents({ from })
+      .then((events) => {
+        setRecentEvents(events);
+        setSleepError(false);
+      })
+      // Without this the card would state "not enough sleep logged yet" on a failed request,
+      // which is a confident claim about the data rather than about the network.
+      .catch(() => setSleepError(true))
+      .finally(() => setSleepLoading(false));
+  }
+
   useEffect(loadMedicationEvents, []);
+  useEffect(loadRecentEvents, []);
+  useEffect(() => {
+    api
+      .getChild()
+      .then(setChild)
+      .catch(() => setChild(null));
+  }, []);
 
   const customPresets = useMemo(() => getCustomPresets(medicationEvents), [medicationEvents]);
 
@@ -50,6 +82,15 @@ export default function HomePage() {
       </div>
 
       {/* Both grids stay mounted (toggled via CSS) so switching tabs never re-fetches or loses timer state. */}
+      <div style={{ display: subject === 'baby' ? 'block' : 'none' }}>
+        <NextSleepCard
+          events={recentEvents}
+          child={child}
+          loading={sleepLoading}
+          error={sleepError}
+        />
+      </div>
+
       <div className="tile-grid" style={{ display: subject === 'baby' ? 'grid' : 'none' }}>
         <EventTile
           icon="💧"
@@ -57,14 +98,22 @@ export default function HomePage() {
           color={EVENT_COLORS.diaper}
           onClick={() => setOpenSheet('diaper')}
         />
-        <FeedingTile onChange={() => showToast('Feeding updated')} />
+        <FeedingTile
+          onChange={() => {
+            showToast('Feeding updated');
+            loadRecentEvents();
+          }}
+        />
         <TimerTile
           type="sleep"
           icon="😴"
           label="Sleep"
           color={EVENT_COLORS.sleep}
           startChoices={[{ key: null, label: 'Start' }]}
-          onChange={() => showToast('Sleep updated')}
+          onChange={() => {
+            showToast('Sleep updated');
+            loadRecentEvents(); // otherwise the card keeps counting down for a baby already asleep
+          }}
         />
         <OutingTile color={EVENT_COLORS.outing} onChange={() => showToast('Outing updated')} />
         <EventTile

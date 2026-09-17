@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
+import { format } from 'date-fns';
 import { api } from '../api/client.js';
 import { FrequencyChart } from '../components/FrequencyChart.jsx';
 import { GrowthPercentileChart } from '../components/GrowthPercentileChart.jsx';
+import { SleepSection } from '../components/SleepSection.jsx';
 import { EVENT_COLORS, DIAPER_SUBTYPE_COLORS } from '../lib/palette.js';
 import { aggregateByDay } from '../lib/aggregate.js';
+import { sleepStats } from '../lib/sleep.js';
 import { ageInMonths } from '../lib/dateUtils.js';
 
 const RANGES = [
@@ -69,17 +72,21 @@ export default function ChartsPage() {
     [events, rangeDays]
   );
 
-  const sleepData = useMemo(() => {
-    const byMinutes = aggregateByDay(
-      events.filter((e) => e.type === 'sleep' && e.endedAt),
-      rangeDays,
-      () => ({ minutes: 0 }),
-      (acc, e) => ({
-        minutes: acc.minutes + Math.round((new Date(e.endedAt) - new Date(e.startedAt)) / 60000),
-      })
-    );
-    return byMinutes.map((row) => ({ day: row.day, hours: Math.round((row.minutes / 60) * 10) / 10 }));
-  }, [events, rangeDays]);
+  /**
+   * Sleep is the one event type that routinely crosses midnight, so unlike the charts above it
+   * cannot be bucketed by the day it started on — that hands a 23:10 -> 02:40 stretch entirely to
+   * the earlier day and overstates it by hours. sleepStats clips each stretch at local midnight
+   * (and merges any overlapping entries first), which is also what the Sleep section below reports,
+   * so the two never disagree on the same page.
+   */
+  const sleepData = useMemo(
+    () =>
+      sleepStats(events, child, Date.now(), rangeDays).perDay.map((row) => ({
+        day: format(new Date(row.dayStart), 'd MMM'),
+        hours: Math.round((row.minutes / 60) * 10) / 10,
+      })),
+    [events, child, rangeDays]
+  );
 
   const growthPoints = useMemo(() => {
     if (!child) return { weight: [], height: [], headCircumference: [] };
@@ -140,6 +147,8 @@ export default function ChartsPage() {
         data={sleepData}
         series={[{ key: 'hours', label: 'Hours', color: EVENT_COLORS.sleep }]}
       />
+
+      <SleepSection events={events} child={child} />
 
       <h2 className="section-title">WHO growth percentiles</h2>
       {!child ? (
