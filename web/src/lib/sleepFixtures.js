@@ -307,9 +307,10 @@ export function generateSleepLog({
 
     sleeps = sleeps.filter((s) => s.end <= endAt);
 
-    // "Someone forgot to log this one" — used to test the missing-log detector.
-    const omit = omitSleepOnDays.find((o) => o.day === dayIndex);
-    if (omit) sleeps = sleeps.filter((_, i) => i !== omit.index);
+    // "Someone forgot to log this one" — used to test the missing-log detector. Several entries
+    // may name the same day, so a scenario can drop more than one sleep from it.
+    const omitted = omitSleepOnDays.filter((o) => o.day === dayIndex).map((o) => o.index);
+    if (omitted.length) sleeps = sleeps.filter((_, i) => !omitted.includes(i));
 
     for (const s of sleeps) {
       events.push({

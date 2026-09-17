@@ -25,6 +25,9 @@ const MINUTE = 60000;
 const HOUR = 3600000;
 const DAY = 86400000;
 
+/** Below this, a logged sleep is a mis-tap or an immediately abandoned timer, not a sleep. */
+const MIN_SLEEP_MINUTES = 5;
+
 // ---------------------------------------------------------------------------
 // Dates (local time) and small statistics, dependency-free
 // ---------------------------------------------------------------------------
@@ -134,6 +137,9 @@ export function normalizeSleeps(events, now = Date.now()) {
     if (!Number.isFinite(start)) continue;
     const end = e.endedAt ? new Date(e.endedAt).getTime() : null;
     if (end != null && !(end > start)) continue; // zero or negative duration: unusable
+    // A sleep of a couple of minutes is a mis-tap, not a sleep — and left in, it splits a real
+    // wake window into two short bogus observations and drags the estimate down with them.
+    if (end != null && end - start < MIN_SLEEP_MINUTES * MINUTE) continue;
     raw.push({ id: e.id, start, end, open: end == null });
   }
   raw.sort((a, b) => a.start - b.start);
@@ -477,6 +483,21 @@ function napRegimeStable(window) {
 }
 
 /**
+ * Spread of a baseline, in the units the z-score needs, with a floor.
+ *
+ * A metronomic child has a median absolute deviation of nearly zero, and dividing by it puts both
+ * tails wrong: exactly zero and no disturbance can EVER be detected (a child whose nights collapse
+ * from eleven hours to two would be waved through), while merely tiny and every ordinary wobble
+ * reads as a crisis. Flooring the scale at 5% of the baseline itself fixes both without blunting
+ * detection for a normally variable child, whose real spread is far above the floor.
+ */
+function baselineScale(values) {
+  const spread = mad(values);
+  const floor = 0.05 * Math.abs(median(values) ?? 0);
+  return Math.max(spread, floor);
+}
+
+/**
  * Is sleep disturbed right now? Teething, travel, a growth spurt, illness — every one of them looks
  * exactly like losing a phase, which is why this exists: while it is true the phase is frozen and
  * the demotion counter is suspended.
@@ -491,7 +512,7 @@ function disturbanceAt(windows, summaries, at) {
   const baseW = windows.filter((w) => !w.excluded && w.wokeAt > baseFrom && w.wokeAt <= recentFrom);
   if (recentW.length >= 4 && baseW.length >= 6) {
     const baseValues = baseW.map((w) => w.value);
-    const scale = mad(baseValues);
+    const scale = baselineScale(baseValues);
     if (scale > 0) {
       const z = Math.abs(median(recentW.map((w) => w.value)) - median(baseValues)) / scale;
       if (z > T.ruptureMadThreshold) return { disturbed: true, reason: 'wake-windows', z };
@@ -506,7 +527,7 @@ function disturbanceAt(windows, summaries, at) {
     .slice(-(T.ruptureRecentDays + T.ruptureBaselineDays), -T.ruptureRecentDays)
     .map((d) => d.nocturnalLongest);
   if (recentD.length >= 2 && baseD.length >= 5) {
-    const scale = mad(baseD);
+    const scale = baselineScale(baseD);
     const baseMedian = median(baseD);
     if (scale > 0 && median(recentD) < baseMedian) {
       const z = Math.abs(median(recentD) - baseMedian) / scale;
@@ -529,24 +550,43 @@ function disturbanceAt(windows, summaries, at) {
  * leak between households.
  *
  * The state machine is asymmetric on purpose. A phase is earned on 5 of 7 days but only lost after
- * 13 failing days out of 14 — and disturbed days count for neither, so five bad nights of teething
- * can never drop a six-month-old back to being treated like a newborn.
+ * 13 failing days out of 14, and a disturbed day cannot contribute to losing one — so five bad
+ * nights of teething can never drop a six-month-old back to being treated like a newborn.
+ *
+ * A disturbed day CAN still contribute to gaining a phase, though, which is less obvious. The
+ * freeze exists to protect against transient degradation; applying it to promotion too would mean
+ * a night that consolidates abruptly (rather than gradually) reads as a shock and holds the child
+ * in the previous phase until the good days become the baseline. Promotion already needs 5 days of
+ * 7, and being told about a rhythm slightly early is a far cheaper mistake than being dropped back
+ * to newborn handling mid-teething.
+ *
+ * One consequence of replaying rather than storing, worth knowing when reading the rules above: the
+ * loaded history is the whole memory. Past roughly two and a half weeks of unbroken regression the
+ * good days fall out of the window entirely, so the phase is not so much demoted as never earned in
+ * the first place, and the answer arrives sooner than "13 failing days out of 14" implies. In
+ * practice the two agree on what matters — a week of bad nights costs nothing, a fortnight and a
+ * half of them means the child genuinely has no rhythm right now — but the second number is the
+ * window, not the rule.
  */
 export function detectPhase(intervals, windows, child, now = Date.now()) {
   const summaries = dailySummaries(intervals, now);
+  // Days with nothing logged are skipped entirely rather than counted as failures, and the trailing
+  // window is seven days *with data*, not seven calendar days. Counting calendar days instead would
+  // mean a family who logs four days a week could never reach five consolidated days out of seven,
+  // and would sit in phase 1 for ever however settled their child actually is.
+  const evaluable = summaries.filter((d) => d.hasData);
 
   let phase = 1;
   let failWindow = [];
   let lastChangeAt = null;
 
-  for (let i = 0; i < summaries.length; i += 1) {
-    const day = summaries[i];
-    if (!day.hasData) continue;
+  for (let i = 0; i < evaluable.length; i += 1) {
+    const day = evaluable[i];
     const at = Math.min(now, day.dayStart + DAY);
-    if (disturbanceAt(windows, summaries, at).disturbed) continue; // frozen
+    const dayDisturbed = disturbanceAt(windows, summaries, at).disturbed;
 
     const ageWeeks = ageInWeeksAt(child?.dateOfBirth, day.dayStart) ?? 999;
-    const window7 = summaries.slice(Math.max(0, i - 6), i + 1);
+    const window7 = evaluable.slice(Math.max(0, i - 6), i + 1);
     const consolidatedDays = window7.filter(nightConsolidated).length;
 
     let target = 1;
@@ -559,7 +599,9 @@ export function detectPhase(intervals, windows, child, now = Date.now()) {
       phase = target;
       failWindow = [];
       lastChangeAt = day.dayStart;
-    } else {
+    } else if (!dayDisturbed) {
+      // Disturbed days are suspended entirely from the demotion count, rather than counted as
+      // passing — a month of alternating good and bad days should still eventually step down.
       failWindow.push(target < phase);
       if (failWindow.length > T.demotionWindowDays) failWindow.shift();
       if (failWindow.filter(Boolean).length >= T.demotionFailingDaysRequired) {
@@ -571,14 +613,14 @@ export function detectPhase(intervals, windows, child, now = Date.now()) {
   }
 
   const disturbance = disturbanceAt(windows, summaries, now);
-  const napCounts = summaries.slice(-7).filter((d) => d.hasData).map((d) => d.napCount);
+  const napCounts = evaluable.slice(-7).map((d) => d.napCount);
 
   return {
     phase,
     disturbed: disturbance.disturbed,
     disturbanceReason: disturbance.reason,
     lastChangeAt,
-    daysOfData: summaries.filter((d) => d.hasData).length,
+    daysOfData: evaluable.length,
     napRegime:
       phase >= 3 && napCounts.length
         ? {
