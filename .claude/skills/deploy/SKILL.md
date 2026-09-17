@@ -36,12 +36,28 @@ substituting the values from that file. Every command below uses `$PI_SSH`.
    backend-only changes if you're unsure; it's cheap and confirms nothing broke.
 3. **Test locally first** (see Testing below) — don't skip this for anything
    touching the server, the DB schema, or MCP tools.
-4. **Sync files to the Pi** (excludes dev artifacts, `.dockerignore` at repo
-   root also governs what actually enters the Docker build):
+4. **Sync files to the Pi.** Stage a clean copy, then swap it in — do NOT
+   extract over the live directory:
    ```sh
-   tar --exclude='node_modules' --exclude='dist' --exclude='data-dev' -C /c/Users/tom_t -cf - baby-tracker | \
-     $PI_SSH "tar -xf - -C /addons/baby-tracker --strip-components=1"
+   $PI_SSH "rm -rf /addons/baby-tracker.new && mkdir -p /addons/baby-tracker.new"
+   cd /c/Users/tom_t/baby-tracker && tar --exclude='node_modules' --exclude='dist' --exclude='data-dev'      -cf - Dockerfile config.yaml .dockerignore README.md server web |      $PI_SSH "tar -xf - -C /addons/baby-tracker.new"
+   $PI_SSH "rm -rf /addons/baby-tracker.old &&      mv /addons/baby-tracker /addons/baby-tracker.old &&      mv /addons/baby-tracker.new /addons/baby-tracker &&      rm -rf /addons/baby-tracker.old"
    ```
+   Two things this fixes, both learned the hard way:
+
+   - **`tar -x` never deletes.** Extracting over the live directory only ever
+     adds, so anything sent once stays for ever. The Pi had accumulated a stale
+     git worktree from August, a full `.git` history, `scheduled_tasks.lock`,
+     and `.claude/skills/deploy/connection.local.md` — this skill's own
+     dev-machine-only connection file, sitting in production. Staging and
+     swapping makes the live directory exactly what was sent, nothing more.
+   - **Send only what the image needs.** The explicit list above replaces
+     "everything except a few excludes", so `.claude/` and `.git` never travel
+     again. `.dockerignore` still governs the Docker build context, but keeping
+     junk off the Pi in the first place is the better guarantee.
+
+   The database is NOT in `/addons` — it lives in `/data`, a Supervisor-managed
+   volume — so swapping the source directory cannot touch anyone's data.
 5. **Reload + update**:
    ```sh
    $PI_SSH "ha store reload && ha apps update local_baby_tracker"
@@ -206,6 +222,25 @@ boots. Always test a migration against a *simulated pre-migration* database
 locally before deploying (recreate the old schema by hand, run
 `runMigrations(db)`, confirm existing rows survive) — this has caught real
 bugs before.
+
+## Never deploy a config.yaml older than the Pi's
+
+Check what the Pi actually runs *before* syncing:
+
+```sh
+$PI_SSH "head -2 /addons/baby-tracker/config.yaml; ha apps info local_baby_tracker | grep -E '^version'"
+```
+
+If the Pi's version is ahead of, or equal to, the repo's, stop and find out why
+rather than syncing over it. This has already gone wrong once: work committed
+only on a worktree branch was deployed, the branch was later deleted, and the Pi
+held the only copy — which a deploy from `main` then overwrote. It was recovered
+from an unreachable commit (`git fsck --unreachable`) and from the Claude
+session transcripts under `~/.claude/projects/`, but that was luck, not process.
+
+The rule that prevents it: **deploy only from `main`, and merge before you
+deploy.** If `ha apps info` reports a version `main` has never produced, the Pi
+is ahead of the repo and something is unmerged.
 
 ## Known gotchas
 
