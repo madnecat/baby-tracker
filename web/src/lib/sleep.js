@@ -144,8 +144,28 @@ export function normalizeSleeps(events, now = Date.now()) {
   }
   raw.sort((a, b) => a.start - b.start);
 
+  // A timer left running and stopped much later becomes a closed entry that spans a day or more.
+  // While it was still open the stale-timer rule below kept it out of the way; once it has an end
+  // nothing would, and the merge would let it swallow every real sleep and wake logged inside it.
+  // A stretch that contains two or more separate sleeps (with real wake time between them) cannot
+  // be one continuous sleep, so it is set aside exactly like a stale open timer.
+  const swallowers = new Set();
+  raw.forEach((e, i) => {
+    if (e.open) return;
+    let groups = 0;
+    let groupEnd = -Infinity;
+    for (let j = i + 1; j < raw.length && raw[j].start <= e.end; j += 1) {
+      const f = raw[j];
+      if (f.open || f.end > e.end) continue;
+      if (f.start >= groupEnd + MIN_SLEEP_MINUTES * MINUTE) groups += 1;
+      groupEnd = Math.max(groupEnd, f.end);
+    }
+    if (groups >= 2) swallowers.add(e);
+  });
+
   const merged = [];
   for (const s of raw) {
+    if (swallowers.has(s)) continue;
     const prev = merged[merged.length - 1];
     const effectiveEnd = s.end ?? Math.max(now, s.start);
     if (prev && s.start <= prev.effectiveEnd) {
@@ -183,6 +203,22 @@ export function normalizeSleeps(events, now = Date.now()) {
   const suspectThreshold = Math.max(4 * HOUR, p90 != null ? 2 * p90 : 0);
   for (const s of merged) {
     if (s.open && (s.stale || now - s.start > suspectThreshold)) s.suspect = true;
+  }
+
+  // Added only now so that it cannot skew the "how long is a normal sleep" threshold above.
+  for (const e of swallowers) {
+    merged.push({
+      id: e.id,
+      start: e.start,
+      end: e.end,
+      effectiveEnd: e.end,
+      open: false,
+      stale: true,
+      suspect: true,
+    });
+  }
+  if (swallowers.size > 0) {
+    merged.sort((a, b) => a.start - b.start || Number(b.suspect) - Number(a.suspect));
   }
 
   // The *last* open interval is the one that might really be running; an earlier one can only be

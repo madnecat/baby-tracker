@@ -111,6 +111,42 @@ describe('normalizeSleeps', () => {
     assert.equal(stats.sleepCount24, 3);
   });
 
+  it('does not let a forgotten timer swallow the real sleeps and wakes once it has been stopped', () => {
+    // The same mistake as above, one step later: while the timer was open the stale rule kept it out
+    // of the way (so the wake windows inside it showed up); the moment it was stopped it became one
+    // 28-hour "sleep" and the merge erased every wake window it covered.
+    const inner = [
+      sleepEvent(NOW - 30 * HOUR, NOW - 29 * HOUR),
+      sleepEvent(NOW - 27 * HOUR, NOW - 26 * HOUR),
+      sleepEvent(NOW - 20 * HOUR, NOW - 19 * HOUR),
+      sleepEvent(NOW - 16 * HOUR, NOW - 13 * HOUR),
+    ];
+    const events = [sleepEvent(NOW - 40 * HOUR, NOW - 12 * HOUR), ...inner, sleepEvent(NOW - 6 * HOUR, NOW - 5 * HOUR)];
+    const { intervals } = normalizeSleeps(events, NOW);
+
+    const real = intervals.filter((s) => !s.suspect);
+    assert.equal(real.length, 5, 'the four sleeps inside plus the one after stand on their own');
+    assert.equal(intervals.filter((s) => s.suspect).length, 1);
+    assert.equal(sleepMinutesInInterval(intervals, NOW - 40 * HOUR, NOW), 60 * (1 + 1 + 1 + 3 + 1));
+
+    const windows = observedWakeWindows(intervals, events, 26, NOW);
+    assert.ok(
+      windows.some((w) => w.wokeAt === NOW - 26 * HOUR && w.sleptAt === NOW - 20 * HOUR),
+      'the wake window between two sleeps inside the swallowed stretch is observed again'
+    );
+  });
+
+  it('still merges a sleep that merely contains one shorter duplicate', () => {
+    const events = [
+      sleepEvent(NOW - 10 * HOUR, NOW - 2 * HOUR),
+      sleepEvent(NOW - 8 * HOUR, NOW - 7 * HOUR), // a retroactive log on top of the same night
+    ];
+    const { intervals } = normalizeSleeps(events, NOW);
+    assert.equal(intervals.length, 1);
+    assert.equal(intervals[0].suspect, false);
+    assert.equal(sleepMinutesInInterval(intervals, NOW - 12 * HOUR, NOW), 480);
+  });
+
   it('keeps a normal running sleep but flags one that has clearly been left running', () => {
     const history = [
       sleepEvent(NOW - 30 * HOUR, NOW - 28 * HOUR),
