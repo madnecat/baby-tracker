@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { normalizeSleeps, observedWakeWindows, predictNextSleep, sleepStats } from '../lib/sleep.js';
 import { EVENT_COLORS, resolve } from '../lib/palette.js';
+import { blockAt, sleepBlocks } from '../lib/sleepBand.js';
 import { useColorScheme } from '../lib/useColorScheme.js';
 
 const DAY_MS = 86400000;
@@ -21,27 +22,28 @@ function formatClock(t) {
   return new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+/** A clock time, prefixed with "Yesterday" when it is not today — the band spans midnight. */
+function formatMoment(t, now) {
+  return new Date(t).toDateString() === new Date(now).toDateString()
+    ? formatClock(t)
+    : `Yesterday ${formatClock(t)}`;
+}
+
 /**
  * The last 24 hours as one band, sleep blocks over an awake ground.
  *
  * Deliberately not a recharts chart: the useful thing here is the *shape* of the day — where the
  * long stretch sat, how chopped up the rest was — and a plain proportional band reads that at a
  * glance on a phone, at a fraction of the weight.
+ *
+ * Tapping a sleep block highlights it, dims the rest and shows its times underneath: a hover
+ * tooltip does not exist on a touch screen.
  */
 function Timeline({ intervals, now, color }) {
+  const [selected, setSelected] = useState(null);
   const from = now - DAY_MS;
-  const blocks = intervals
-    .filter((s) => !s.suspect && s.effectiveEnd > from && s.start < now)
-    .map((s) => {
-      const start = Math.max(s.start, from);
-      const end = Math.min(s.effectiveEnd, now);
-      return {
-        key: `${s.start}-${s.effectiveEnd}`,
-        left: ((start - from) / DAY_MS) * 100,
-        width: Math.max(0.6, ((end - start) / DAY_MS) * 100),
-        title: `${formatClock(start)}–${formatClock(end)}`,
-      };
-    });
+  const blocks = useMemo(() => sleepBlocks(intervals, from, now), [intervals, from, now]);
+  const chosen = selected != null ? blocks[selected] : null;
 
   // Ticks every 6 hours, on the hour, so the band is readable against the wall clock.
   const ticks = [];
@@ -52,33 +54,52 @@ function Timeline({ intervals, now, color }) {
     ticks.push({ t, left: ((t - from) / DAY_MS) * 100 });
   }
 
+  function handleClick(event) {
+    // Measure the padding box (inside the 1px border), which is what the blocks are positioned in.
+    const band = event.currentTarget;
+    if (band.clientWidth === 0) return;
+    const x = event.clientX - band.getBoundingClientRect().left - band.clientLeft;
+    const index = blockAt(blocks, x, band.clientWidth, from);
+    setSelected(index === selected ? null : index);
+  }
+
   return (
     <div style={{ padding: '0 8px 4px' }}>
       <div
+        onClick={handleClick}
         style={{
           position: 'relative',
-          height: 28,
+          height: 40,
           borderRadius: 6,
           background: 'var(--page)',
           border: '1px solid var(--border)',
           overflow: 'hidden',
+          cursor: 'pointer',
+          touchAction: 'manipulation',
+          WebkitTapHighlightColor: 'transparent',
         }}
       >
-        {blocks.map((b) => (
-          <div
-            key={b.key}
-            title={b.title}
-            style={{
-              position: 'absolute',
-              left: `${b.left}%`,
-              width: `${b.width}%`,
-              top: 0,
-              bottom: 0,
-              background: color,
-              opacity: 0.85,
-            }}
-          />
-        ))}
+        {blocks.map((b, index) => {
+          const isChosen = index === selected;
+          const dimmed = selected != null && !isChosen;
+          return (
+            <div
+              key={`${b.start}-${b.end}`}
+              style={{
+                position: 'absolute',
+                left: `${((b.start - from) / DAY_MS) * 100}%`,
+                width: `${Math.max(0.6, ((b.end - b.start) / DAY_MS) * 100)}%`,
+                top: 0,
+                bottom: 0,
+                background: color,
+                opacity: dimmed ? 0.3 : isChosen ? 1 : 0.85,
+                boxShadow: isChosen ? 'inset 0 0 0 2px var(--text-primary)' : 'none',
+                transition: 'opacity 120ms',
+                pointerEvents: 'none',
+              }}
+            />
+          );
+        })}
       </div>
       <div style={{ position: 'relative', height: 14, fontSize: '0.65rem', color: 'var(--text-secondary)' }}>
         {ticks.map((tick) => (
@@ -86,6 +107,22 @@ function Timeline({ intervals, now, color }) {
             {formatClock(tick.t)}
           </span>
         ))}
+      </div>
+      <div
+        aria-live="polite"
+        style={{ minHeight: 20, marginTop: 8, fontSize: '0.78rem', color: 'var(--text-secondary)' }}
+      >
+        {chosen ? (
+          <>
+            <strong style={{ color: 'var(--text-primary)' }}>
+              {formatMoment(chosen.fullStart, now)} → {chosen.open ? 'now' : formatMoment(chosen.end, now)}
+            </strong>
+            {' · '}
+            {formatHm((chosen.end - chosen.fullStart) / 60000)}
+          </>
+        ) : (
+          'Tap a sleep block for its times.'
+        )}
       </div>
     </div>
   );
