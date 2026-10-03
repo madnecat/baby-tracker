@@ -57,6 +57,17 @@ const MIGRATIONS = [
       ]),
     log: 'Migrated events.type to allow sleep entries',
   },
+  {
+    version: 3,
+    run: (db) => {
+      // Fresh databases already get this column from schema.sql, so only add it when missing.
+      const columns = db.prepare(`PRAGMA table_info(settings)`).all();
+      if (!columns.some((c) => c.name === 'hide_baby_medication')) {
+        db.exec(`ALTER TABLE settings ADD COLUMN hide_baby_medication INTEGER NOT NULL DEFAULT 0`);
+      }
+    },
+    log: 'Added settings.hide_baby_medication',
+  },
 ];
 
 export function runMigrations(db) {

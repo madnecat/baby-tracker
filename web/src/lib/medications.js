@@ -64,10 +64,27 @@ export function nextDoseInfo(event, now = Date.now()) {
   };
 }
 
+/** Who a logged dose belongs to. Doses logged before baby medication existed have no `who`
+ * and were all mum's, so anything that isn't explicitly 'baby' is mum. */
+export function medicationWho(event) {
+  return event.details?.who === 'baby' ? 'baby' : 'mom';
+}
+
+/** Medication events for one person, keeping the input order (newest-first from the API). */
+export function medicationsFor(medicationEvents, who) {
+  return medicationEvents.filter((e) => medicationWho(e) === who);
+}
+
+/** Built-in presets are adult doses for mum; baby medication is entirely user-defined ("Other"). */
+function presetsFor(who) {
+  return who === 'baby' ? [] : MEDICATION_PRESETS;
+}
+
 /** All known medication names: presets first (in preset order), then any extra names seen in
- * logged events, alphabetically. `medicationEvents` order doesn't matter here. */
-export function getMedicationNames(medicationEvents) {
-  const presetNames = MEDICATION_PRESETS.map((p) => p.name);
+ * logged events, alphabetically. `medicationEvents` order doesn't matter here. Pass events
+ * already filtered with medicationsFor(); `who` only decides whether mum's presets apply. */
+export function getMedicationNames(medicationEvents, who = 'mom') {
+  const presetNames = presetsFor(who).map((p) => p.name);
   const seen = new Set(presetNames);
   const extra = [];
   for (const e of medicationEvents) {
@@ -82,9 +99,9 @@ export function getMedicationNames(medicationEvents) {
 }
 
 /** Same ordering as getMedicationNames, filtered down to names with at least one logged dose. */
-export function loggedMedicationNames(medicationEvents) {
+export function loggedMedicationNames(medicationEvents, who = 'mom') {
   const logged = new Set(medicationEvents.map((e) => e.details?.name).filter(Boolean));
-  return getMedicationNames(medicationEvents).filter((n) => logged.has(n));
+  return getMedicationNames(medicationEvents, who).filter((n) => logged.has(n));
 }
 
 /** Most recent event for a given medication name, or null. Relies on medicationEvents being
@@ -97,8 +114,8 @@ export function lastDoseFor(medicationEvents, name) {
  * once, so they can render as their own MedicationTile — defaults taken from the most recent
  * dose of that name. Presets already in MEDICATION_PRESETS are excluded (they have their own
  * fixed entry already). */
-export function getCustomPresets(medicationEvents) {
-  const presetNames = new Set(MEDICATION_PRESETS.map((p) => p.name));
+export function getCustomPresets(medicationEvents, who = 'mom') {
+  const presetNames = new Set(presetsFor(who).map((p) => p.name));
   const seen = new Set();
   const customPresets = [];
   for (const e of medicationEvents) {

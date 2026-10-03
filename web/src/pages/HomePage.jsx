@@ -11,7 +11,7 @@ import { NextSleepCard } from '../components/NextSleepCard.jsx';
 import { GrowthSheet } from '../components/GrowthSheet.jsx';
 import { api } from '../api/client.js';
 import { EVENT_COLORS } from '../lib/palette.js';
-import { MEDICATION_PRESETS, getCustomPresets } from '../lib/medications.js';
+import { MEDICATION_PRESETS, getCustomPresets, medicationsFor } from '../lib/medications.js';
 
 export default function HomePage() {
   const [subject, setSubject] = useState('baby');
@@ -56,7 +56,13 @@ export default function HomePage() {
       .catch(() => setChild(null));
   }, []);
 
-  const customPresets = useMemo(() => getCustomPresets(medicationEvents), [medicationEvents]);
+  const momMedicationEvents = useMemo(() => medicationsFor(medicationEvents, 'mom'), [medicationEvents]);
+  const babyMedicationEvents = useMemo(() => medicationsFor(medicationEvents, 'baby'), [medicationEvents]);
+  const customPresets = useMemo(() => getCustomPresets(momMedicationEvents, 'mom'), [momMedicationEvents]);
+  const babyCustomPresets = useMemo(
+    () => getCustomPresets(babyMedicationEvents, 'baby'),
+    [babyMedicationEvents]
+  );
 
   function showToast(message) {
     setToast(message);
@@ -116,6 +122,25 @@ export default function HomePage() {
           }}
         />
         <OutingTile color={EVENT_COLORS.outing} onChange={() => showToast('Outing updated')} />
+        {babyCustomPresets.map((preset) => (
+          <MedicationTile
+            key={preset.key}
+            preset={preset}
+            who="baby"
+            medicationEvents={babyMedicationEvents}
+            onLogged={() => {
+              loadMedicationEvents();
+              showToast(`${preset.name} logged`);
+            }}
+          />
+        ))}
+        <EventTile
+          icon="💊"
+          label="Medication"
+          sub="Vitamin D, etc."
+          color={EVENT_COLORS.medication}
+          onClick={() => setOpenSheet('medication-other-baby')}
+        />
         <EventTile
           icon="🌡️"
           label="Temperature"
@@ -148,7 +173,7 @@ export default function HomePage() {
           <MedicationTile
             key={preset.key}
             preset={preset}
-            medicationEvents={medicationEvents}
+            medicationEvents={momMedicationEvents}
             onLogged={() => {
               loadMedicationEvents();
               showToast(`${preset.name} logged`);
@@ -159,7 +184,7 @@ export default function HomePage() {
           <MedicationTile
             key={preset.key}
             preset={preset}
-            medicationEvents={medicationEvents}
+            medicationEvents={momMedicationEvents}
             onLogged={() => {
               loadMedicationEvents();
               showToast(`${preset.name} logged`);
@@ -207,8 +232,19 @@ export default function HomePage() {
           onSaved={() => closeAndToast('Growth measurement logged')}
         />
       )}
+      {openSheet === 'medication-other-baby' && (
+        <MedicationSheet
+          who="baby"
+          onClose={() => setOpenSheet(null)}
+          onSaved={() => {
+            loadMedicationEvents();
+            closeAndToast('Medication logged');
+          }}
+        />
+      )}
       {openSheet === 'medication-other' && (
         <MedicationSheet
+          who="mom"
           onClose={() => setOpenSheet(null)}
           onSaved={() => {
             loadMedicationEvents();

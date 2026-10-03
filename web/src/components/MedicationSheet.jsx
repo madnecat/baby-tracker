@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Sheet } from './Sheet.jsx';
 import { api } from '../api/client.js';
 
-export function MedicationSheet({ preset, onClose, onSaved }) {
+export function MedicationSheet({ preset, who = 'mom', onClose, onSaved }) {
   const [name, setName] = useState(preset?.name || '');
   const [doseAmount, setDoseAmount] = useState(preset?.doseAmount ?? '');
   const [doseUnit, setDoseUnit] = useState(preset?.doseUnit || 'mg');
@@ -25,6 +25,7 @@ export function MedicationSheet({ preset, onClose, onSaved }) {
         endedAt: now,
         details: {
           name: name.trim(),
+          who,
           doseAmount: doseAmount === '' ? null : Number(doseAmount),
           doseUnit: doseUnit || null,
           intervalHours: Number(intervalHours),

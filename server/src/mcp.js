@@ -227,22 +227,23 @@ function buildServer(ctx) {
     'log_medication',
     {
       description:
-        'Log a medication dose taken by mum. name is required — ask if unclear. For intervalHours, use the correct standard spacing if you know the medication (e.g. paracetamol 6h, ibuprofen 6h) rather than the generic 6h default — and if you are not confident of the correct interval, ask the user instead of guessing, since this drives the "safe to take again" timing shown in the app.',
+        'Log a medication dose taken by mum (default) or by the baby (who: "baby"). name is required — ask if unclear. For intervalHours, use the correct standard spacing if you know the medication (e.g. paracetamol 6h, ibuprofen 6h) rather than the generic 6h default — and if you are not confident of the correct interval, ask the user instead of guessing, since this drives the "safe to take again" timing shown in the app.',
       inputSchema: z.object({
         name: z.string(),
+        who: z.enum(['mom', 'baby']).default('mom').describe('Who took the dose — "mom" unless the user says it was the baby'),
         doseAmount: z.number().optional(),
         doseUnit: z.string().optional(),
         intervalHours: z.number().positive().default(6).describe('Minimum hours before the next dose — see tool description'),
         at: z.string().datetime().optional(),
       }),
     },
-    async ({ name, doseAmount, doseUnit, intervalHours, at }) => {
+    async ({ name, who, doseAmount, doseUnit, intervalHours, at }) => {
       const when = at || nowIso();
       const event = createEvent(db, {
         type: 'medication',
         startedAt: when,
         endedAt: when,
-        details: { name, doseAmount: doseAmount ?? null, doseUnit: doseUnit ?? null, intervalHours },
+        details: { name, who, doseAmount: doseAmount ?? null, doseUnit: doseUnit ?? null, intervalHours },
         createdBy: userId,
       });
       return textResult(`Logged ${name} dose (id ${event.id}) at ${when}. Next safe dose from ${new Date(new Date(when).getTime() + intervalHours * 3600000).toISOString()}.`);

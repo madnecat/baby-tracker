@@ -9,6 +9,7 @@ import {
   getMedicationStatus,
   lastDoseFor,
   loggedMedicationNames,
+  medicationsFor,
   nextDoseInfo,
 } from '../lib/medications.js';
 
@@ -224,8 +225,11 @@ export default function MumPage() {
   }
 
   const contractions = useMemo(() => events.filter((e) => e.type === 'contraction'), [events]);
-  const medications = useMemo(() => events.filter((e) => e.type === 'medication'), [events]);
-  const medicationNames = useMemo(() => loggedMedicationNames(medications), [medications]);
+  const medications = useMemo(
+    () => medicationsFor(events.filter((e) => e.type === 'medication'), 'mom'),
+    [events]
+  );
+  const medicationNames = useMemo(() => loggedMedicationNames(medications, 'mom'), [medications]);
   const lastDoseByName = useMemo(
     () => new Map(medicationNames.map((name) => [name, lastDoseFor(medications, name)])),
     [medications, medicationNames]
