@@ -67,4 +67,5 @@ export default {
   'sleep.tapHint': 'Tap a sleep block for its times.',
   'sleep.range': '{from} → {to}',
   'sleep.now': 'now',
+  'sleep.timeRange': '{from}–{to}',
 };

@@ -1,8 +1,10 @@
 // Charts and the breastfeeding-notes card.
 export default {
   'chart.contractions.title': 'Contractions',
-  'chart.contractions.empty': 'No contractions in the last {range}.',
-  'chart.contractions.summaryLine': 'Last {range} — {summary}',
+  'chart.contractions.empty_one': 'No contractions in the last {range}.',
+  'chart.contractions.empty_other': 'No contractions in the last {range}.',
+  'chart.contractions.summaryLine_one': 'Last {range} — {summary}',
+  'chart.contractions.summaryLine_other': 'Last {range} — {summary}',
   'chart.contractions.count_one': '{count} contraction',
   'chart.contractions.count_other': '{count} contractions',
   'chart.contractions.every': 'every ~{duration}',
@@ -33,4 +35,5 @@ export default {
   'chart.feedInsights.fullAria_one': 'Seemed full after {satisfied} of {answered} feed',
   'chart.feedInsights.fullAria_other': 'Seemed full after {satisfied} of {answered} feeds',
   'chart.feedInsights.disclaimer': 'From your own notes (typical = median length). Not a medical assessment — talk to your midwife or health visitor if you are worried about feeding.',
+  'chart.feedInsights.minutes': '{m} min',
 };

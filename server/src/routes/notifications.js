@@ -28,16 +28,27 @@ export function notificationsRouter(mailer) {
       isMom: momUserId === req.user.id,
       canAskAdmin: !!mailer?.config.adminEmail,
       ...getPrefs(req.db, req.user.id),
+      // Kept for older web builds that still read it: it is now the account's app language.
+      language: getUserLanguage(req.db, req.user.id),
     });
   });
 
   router.put('/', (req, res) => {
-    const { enabled, email } = req.body || {};
+    const { enabled, email, language } = req.body || {};
+    // Older web builds sent the reminder language here. It is the same thing as the account's app
+    // language now, so a valid value updates the account and an invalid one is still rejected.
+    if (language !== undefined && language !== 'en' && language !== 'fr') {
+      return res.status(400).json({ error: 'language must be "en" or "fr".', code: 'LANGUAGE_INVALID' });
+    }
     if (enabled === true && !mailer) {
       return res.status(409).json({ error: 'Email reminders are not set up on this server.', code: 'MAIL_NOT_CONFIGURED' });
     }
     try {
-      res.json(savePrefs(req.db, req.user.id, { enabled, email }));
+      const saved = savePrefs(req.db, req.user.id, { enabled, email });
+      if (language !== undefined) {
+        req.db.prepare(`UPDATE users SET language = ? WHERE id = ?`).run(language, req.user.id);
+      }
+      res.json({ ...saved, language: getUserLanguage(req.db, req.user.id) });
     } catch (e) {
       if (e instanceof PrefsError) return res.status(400).json({ error: e.message, code: e.code });
       throw e;

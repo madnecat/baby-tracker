@@ -9,4 +9,6 @@ export default {
   'feed.note.none': 'Aucune remarque',
   'feed.bothSides': 'Les deux côtés',
   'feed.sidesThen': '{first}, puis {second}',
+  'feed.sideInline.left': 'gauche',
+  'feed.sideInline.right': 'droite',
 };

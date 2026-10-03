@@ -74,7 +74,7 @@ test('observationsText joins tags and the after-feed answer', () => {
 test('French sides and observations', () => {
   withLocale('fr', () => {
     assert.equal(describeSides({ side: 'left' }), 'Gauche');
-    assert.equal(describeSides({ side: 'both', firstSide: 'right' }), 'Droite, puis Gauche');
+    assert.equal(describeSides({ side: 'both', firstSide: 'right' }), 'Droite, puis gauche');
     assert.equal(describeSides({ side: 'both' }), 'Les deux côtés');
     assert.equal(
       observationsText({ tags: ['efficient'], afterFeed: 'still_hungry' }),

@@ -271,9 +271,15 @@ test('getUserLanguage defaults to English; the test email follows the account la
   await call('PUT', '/', { email: 'mum@example.com' });
   assert.equal((await call('POST', '/test')).status, 204);
   assert.match(sent[0].subject, /email de test/);
-  // A language sent with the reminder prefs is ignored: the account decides.
+  // Older web builds still read and send `language` on the reminder prefs: it is the account
+  // language now. A valid one updates the account, an invalid one is rejected as before.
+  assert.equal((await call('GET', '/')).body.language, 'fr');
   const put = await call('PUT', '/', { language: 'en' });
-  assert.deepEqual(put.body, { email: 'mum@example.com', enabled: false });
+  assert.deepEqual(put.body, { email: 'mum@example.com', enabled: false, language: 'en' });
+  assert.equal(db.prepare(`SELECT language FROM users WHERE id = 1`).get().language, 'en');
+  assertError(await call('PUT', '/', { language: 'de' }), 400, 'LANGUAGE_INVALID', 'language must be "en" or "fr".');
+  assert.equal(getUserLanguage(db, 1), 'en', 'an invalid language changes nothing');
+  assert.equal((await call('PUT', '/', { email: 'new@example.com' })).body.language, 'en', 'not sending it keeps it');
 });
 
 test('migration v6 adds users.language to a v5 database and keeps users', () => {
@@ -289,6 +295,23 @@ test('migration v6 adds users.language to a v5 database and keeps users', () => 
       { username: 'mum', language: null },
       { username: 'dad', language: null },
     ]
+  );
+});
+
+test('migration v6 keeps a French reminder language chosen in an earlier build', () => {
+  const db = makeDb();
+  db.prepare(`INSERT INTO notification_prefs (user_id, email, enabled, language, enabled_at) VALUES (1, 'a@b.co', 1, 'fr', '2026-10-01T00:00:00.000Z')`).run();
+  db.prepare(`INSERT INTO notification_prefs (user_id, email, enabled, language) VALUES (2, 'c@d.co', 0, 'en')`).run();
+  db.exec(`ALTER TABLE users DROP COLUMN language`);
+  db.pragma('user_version = 5');
+  runMigrations(db);
+  assert.deepEqual(
+    db.prepare(`SELECT username, language FROM users ORDER BY id`).all(),
+    [
+      { username: 'mum', language: 'fr' },
+      { username: 'dad', language: null },
+    ],
+    'only a French choice is carried over; the default English stays "not chosen yet"'
   );
 });
 

@@ -1,4 +1,4 @@
-// Mots utilisés partout dans l'application. Ce qui est propre à un écran va dans le fichier de ce domaine.
+// Mots utilisés partout dans l’application. Ce qui est propre à un écran va dans le fichier de ce domaine.
 export default {
   'common.save': 'Enregistrer',
   'common.saving': 'Enregistrement…',
@@ -17,7 +17,7 @@ export default {
   'side.both': 'Les deux',
 
   'language.title': 'Langue',
-  'language.label': "Langue de l'application",
+  'language.label': "Langue de l’application",
   'language.hint':
     'Enregistrée sur votre compte : elle vous suit sur tous vos appareils. Les emails de rappel l’utilisent aussi.',
   'language.en': 'English',

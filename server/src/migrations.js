@@ -97,6 +97,18 @@ const MIGRATIONS = [
       if (!columns.some((c) => c.name === 'language')) {
         db.exec(`ALTER TABLE users ADD COLUMN language TEXT CHECK (language IN ('en','fr'))`);
       }
+      // A reminder language picked in an earlier build is the same preference as the app
+      // language now: keep a French choice instead of silently going back to English emails.
+      const hasPrefs = db
+        .prepare(`SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'notification_prefs'`)
+        .get();
+      if (hasPrefs) {
+        db.exec(
+          `UPDATE users SET language = 'fr'
+           WHERE language IS NULL
+             AND id IN (SELECT user_id FROM notification_prefs WHERE language = 'fr')`
+        );
+      }
     },
     log: 'Added users.language',
   },

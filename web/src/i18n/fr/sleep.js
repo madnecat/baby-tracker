@@ -71,4 +71,5 @@ export default {
   'sleep.tapHint': 'Touchez un bloc de sommeil pour voir ses horaires.',
   'sleep.range': '{from} → {to}',
   'sleep.now': 'maintenant',
+  'sleep.timeRange': '{from}–{to}',
 };

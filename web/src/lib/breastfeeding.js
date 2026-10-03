@@ -59,7 +59,7 @@ export function describeSides(details) {
   if (side === 'both') {
     const first = firstSideOf(details);
     return first
-      ? t('feed.sidesThen', { first: t(SIDE_LABEL_KEY[first]), second: t(SIDE_LABEL_KEY[OTHER[first]]) })
+      ? t('feed.sidesThen', { first: t(SIDE_LABEL_KEY[first]), second: t(`feed.sideInline.${OTHER[first]}`) })
       : t('feed.bothSides');
   }
   return '?';

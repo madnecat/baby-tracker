@@ -26,4 +26,5 @@ export default {
 
   'tiles.outing.label': 'Outing',
   'tiles.outing.endLabel': 'Outing — End',
+  'tiles.timer.start.sleep': 'Start sleep',
 };

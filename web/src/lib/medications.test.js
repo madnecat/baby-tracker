@@ -33,7 +33,7 @@ test('status lines in French', () => {
   withLocale('fr', () => {
     assert.equal(getMedicationStatus(null, AT).sub, 'Aucune prise récente');
     const d = { startedAt: new Date(AT - HOUR).toISOString(), details: { intervalHours: 6 } };
-    assert.match(getMedicationStatus(d, AT).sub, /^Attendre 5\u00A0h 0\u00A0min \(jusqu'à \d\d:\d\d\)$/);
+    assert.match(getMedicationStatus(d, AT).sub, /^Attendre 5\u00A0h 0\u00A0min \(jusqu’à \d\d:\d\d\)$/);
     assert.equal(getMedicationStatus(d, AT + 6 * HOUR).sub, 'Prise possible maintenant');
     assert.match(nextDoseInfo(d, AT).label, /^Prochaine prise possible\u00A0: /);
   });

@@ -92,3 +92,14 @@ export function dayKey(iso) {
 export function daysAgo(iso) {
   return differenceInCalendarDays(new Date(), new Date(iso));
 }
+
+/**
+ * Gap in minutes for the sleep card: '1h 05m' from an hour up, otherwise '30 min' (words, not an
+ * 'm' suffix) — the wording the card has always used.
+ */
+export function formatGap(minutes) {
+  const total = Math.max(0, Math.round(minutes));
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return h > 0 ? t('time.hm', { h, m: String(m).padStart(2, '0') }) : t('time.minutes', { m });
+}

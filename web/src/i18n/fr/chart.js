@@ -1,8 +1,10 @@
 // Graphiques et carte des remarques d’allaitement.
 export default {
   'chart.contractions.title': 'Contractions',
-  'chart.contractions.empty': 'Aucune contraction sur les dernières {range}.',
-  'chart.contractions.summaryLine': 'Dernières {range} — {summary}',
+  'chart.contractions.empty_one': 'Aucune contraction au cours de la dernière heure.',
+  'chart.contractions.empty_other': 'Aucune contraction au cours des {count} dernières heures.',
+  'chart.contractions.summaryLine_one': 'Dernière heure — {summary}',
+  'chart.contractions.summaryLine_other': '{count} dernières heures — {summary}',
   'chart.contractions.count_one': '{count} contraction',
   'chart.contractions.count_other': '{count} contractions',
   'chart.contractions.every': 'toutes les ~{duration}',
@@ -33,4 +35,5 @@ export default {
   'chart.feedInsights.fullAria_one': 'Satiété apparente après {satisfied} tétée sur {answered}',
   'chart.feedInsights.fullAria_other': 'Satiété apparente après {satisfied} tétées sur {answered}',
   'chart.feedInsights.disclaimer': 'D’après vos propres remarques (durée typique = durée médiane). Ce n’est pas une évaluation médicale : parlez-en à votre sage-femme, à votre médecin ou à la PMI si l’allaitement vous inquiète.',
+  'chart.feedInsights.minutes': '{m} min',
 };

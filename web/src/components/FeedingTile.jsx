@@ -6,7 +6,7 @@ import { FeedQualitySheet } from './FeedQualitySheet.jsx';
 import { api, errorMessage } from '../api/client.js';
 import { t } from '../i18n/index.js';
 import { EVENT_COLORS } from '../lib/palette.js';
-import { formatAgo, formatDuration } from '../lib/dateUtils.js';
+import { formatDuration } from '../lib/dateUtils.js';
 import { describeSides, lastFinishedFeed, suggestNextSide } from '../lib/breastfeeding.js';
 
 const SIDE_CHOICES = [
@@ -108,7 +108,7 @@ export function FeedingTile({ onChange }) {
   const activeFirst = active?.details?.firstSide;
   const sideText =
     activeSide === 'both' && activeFirst
-      ? t('tiles.feeding.bothFirst', { side: t(activeFirst === 'left' ? 'side.left' : 'side.right') })
+      ? t('tiles.feeding.bothFirst', { side: t(`feed.sideInline.${activeFirst === 'left' ? 'left' : 'right'}`) })
       : activeSide
         ? describeSides(active.details)
         : null;
@@ -191,12 +191,12 @@ export function FeedingTile({ onChange }) {
               {suggested
                 ? t('tiles.feeding.lastFeedSuggested', {
                     sides: describeSides(lastFeed.details),
-                    ago: formatAgo(lastFeed.endedAt),
+                    ago: t('time.ago', { duration: formatDuration(lastFeed.endedAt) }),
                     side: t(suggested === 'left' ? 'side.left' : 'side.right'),
                   })
                 : t('tiles.feeding.lastFeed', {
                     sides: describeSides(lastFeed.details),
-                    ago: formatAgo(lastFeed.endedAt),
+                    ago: t('time.ago', { duration: formatDuration(lastFeed.endedAt) }),
                   })}
             </p>
           )}

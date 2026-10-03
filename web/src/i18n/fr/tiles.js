@@ -26,4 +26,5 @@ export default {
 
   'tiles.outing.label': 'Sortie',
   'tiles.outing.endLabel': 'Sortie — Terminer',
+  'tiles.timer.start.sleep': 'Démarrer le sommeil',
 };

@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { feedInsights } from '../lib/breastfeeding.js';
 import { t } from '../i18n/index.js';
-import { formatMinutes } from '../lib/dateUtils.js';
 import { FEED_NOTE_COLORS, resolve } from '../lib/palette.js';
 import { useColorScheme } from '../lib/useColorScheme.js';
 
@@ -73,7 +72,7 @@ export function FeedInsightsCard({ events }) {
             <span style={secondary}>
               {mix[k].count > 0 && mix[k].count >= MIN_FOR_TYPICAL && k !== 'none' && k !== 'other'
                 ? t('chart.feedInsights.rowTypical', {
-                    duration: formatMinutes(mix[k].medianMinutes),
+                    duration: t('chart.feedInsights.minutes', { m: Math.round(mix[k].medianMinutes) }),
                     count: mix[k].count,
                     pct: pct(mix[k].count, totalCount),
                   })

@@ -111,11 +111,11 @@ export function ContractionChart({ contractions }) {
         ))}
       </div>
       {count === 0 ? (
-        <div className="empty-state">{t('chart.contractions.empty', { range: rangeLabel })}</div>
+        <div className="empty-state">{t('chart.contractions.empty', { range: rangeLabel, count: rangeHours })}</div>
       ) : (
         <>
           <p style={{ margin: '0 8px 8px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-            {t('chart.contractions.summaryLine', { range: rangeLabel, summary })}
+            {t('chart.contractions.summaryLine', { range: rangeLabel, summary, count: rangeHours })}
           </p>
           <ResponsiveContainer width="100%" height={220}>
             <ComposedChart data={points} margin={{ top: 8, right: 16, left: -8, bottom: 0 }}>

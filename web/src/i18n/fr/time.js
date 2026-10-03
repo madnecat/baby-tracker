@@ -7,4 +7,5 @@ export default {
   'time.ms': '{m} min {s} s',
   'time.ago': 'il y a {duration}',
   'time.yesterdayAt': 'Hier {time}',
+  'time.minutes': '{m} min',
 };

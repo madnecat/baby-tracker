@@ -2,14 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { predictNextSleep } from '../lib/sleep.js';
 import { EVENT_COLORS, resolve } from '../lib/palette.js';
 import { useColorScheme } from '../lib/useColorScheme.js';
-import { formatAgo, formatClock, formatMinutes } from '../lib/dateUtils.js';
-import { t, tOr, dateFnsLocale } from '../i18n/index.js';
-import { format } from 'date-fns';
+import { formatClock, formatGap } from '../lib/dateUtils.js';
+import { t, tOr, intlLocale } from '../i18n/index.js';
 
 /** Rounded to 5 minutes: the underlying estimate is nowhere near minute-precise, so don't imply it. */
 function formatRange(from, to) {
   const round = (t) => Math.round(t / (5 * 60000)) * 5 * 60000;
-  return t('sleep.range', { from: formatClock(round(from)), to: formatClock(round(to)) });
+  return t('sleep.timeRange', { from: formatClock(round(from)), to: formatClock(round(to)) });
 }
 
 function Line({ children, muted }) {
@@ -83,7 +82,7 @@ export function NextSleepCard({ events, child, loading, error }) {
             </Line>
             <Line muted>
               {t('sleep.staleDetail', {
-                date: format(new Date(prediction.lastWakeAt), 'd MMM yyyy', { locale: dateFnsLocale() }),
+                date: new Date(prediction.lastWakeAt).toLocaleDateString(intlLocale()),
                 time: formatClock(prediction.lastWakeAt),
               })}
             </Line>
@@ -98,7 +97,7 @@ export function NextSleepCard({ events, child, loading, error }) {
           <>
             <Line>
               <strong>{t('sleep.asleepSince', { time: formatClock(prediction.asleepSince) })}</strong> ·{' '}
-              {formatMinutes((now - prediction.asleepSince) / 60000)}
+              {formatGap((now - prediction.asleepSince) / 60000)}
             </Line>
             <Line muted>
               {!personal
@@ -129,7 +128,7 @@ export function NextSleepCard({ events, child, loading, error }) {
                   ? // Inside the window but past its midpoint: "In about 0 min" is a silly way to
                     // say the moment has arrived.
                     t('sleep.anyTimeNow')
-                  : t('sleep.inAbout', { duration: formatMinutes((prediction.point - now) / 60000) })}
+                  : t('sleep.inAbout', { duration: formatGap((prediction.point - now) / 60000) })}
             </Line>
           </>
         )}
@@ -155,7 +154,7 @@ export function NextSleepCard({ events, child, loading, error }) {
 
         {prediction.lastWakeAt && state !== 'asleep' && !prediction.staleHistory && (
           <Line muted>
-            {t('sleep.lastWoke', { time: formatClock(prediction.lastWakeAt), ago: formatAgo(prediction.lastWakeAt, now) })}
+            {t('sleep.lastWoke', { time: formatClock(prediction.lastWakeAt), ago: t('time.ago', { duration: formatGap((now - prediction.lastWakeAt) / 60000) }) })}
           </Line>
         )}
 
