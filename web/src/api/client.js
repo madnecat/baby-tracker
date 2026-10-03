@@ -52,6 +52,12 @@ export const api = {
   updateSettings: (patch) =>
     request('/settings', { method: 'PATCH', body: JSON.stringify(patch) }),
 
+  getNotifications: () => request('/notifications'),
+  updateNotifications: (patch) =>
+    request('/notifications', { method: 'PUT', body: JSON.stringify(patch) }),
+  sendTestEmail: () => request('/notifications/test', { method: 'POST' }),
+  requestMomSetup: () => request('/notifications/request-mom', { method: 'POST' }),
+
   milestoneCompletions: () => request('/milestones/completions'),
   setMilestoneCompletion: (key, completed) =>
     request(`/milestones/completions/${encodeURIComponent(key)}`, {

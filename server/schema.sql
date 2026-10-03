@@ -52,7 +52,30 @@ CREATE TABLE IF NOT EXISTS milestone_completions (
 CREATE TABLE IF NOT EXISTS settings (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   hide_contractions INTEGER NOT NULL DEFAULT 0,
-  hide_baby_medication INTEGER NOT NULL DEFAULT 0
+  hide_baby_medication INTEGER NOT NULL DEFAULT 0,
+  -- Which parent is Mum; set from the add-on configuration on every boot (never from the web UI).
+  mom_user_id INTEGER
+);
+
+-- Per-parent email reminder preferences. Off by default; enabled_at is when it was last switched
+-- on, so doses that fell due before that never trigger a reminder.
+CREATE TABLE IF NOT EXISTS notification_prefs (
+  user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  email TEXT NOT NULL DEFAULT '',
+  enabled INTEGER NOT NULL DEFAULT 0,
+  language TEXT NOT NULL DEFAULT 'en' CHECK (language IN ('en','fr')),
+  enabled_at TEXT
+);
+
+-- One row per reminder email actually delivered. No foreign key to events on purpose: the events
+-- table is rebuilt-and-swapped by some migrations, which would silently wipe or break a reference.
+-- Orphans are purged by the reminder scheduler.
+CREATE TABLE IF NOT EXISTS medication_reminders (
+  event_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  due_at TEXT NOT NULL,
+  sent_at TEXT NOT NULL,
+  PRIMARY KEY (event_id, user_id, due_at)
 );
 
 CREATE TABLE IF NOT EXISTS growth_measurements (

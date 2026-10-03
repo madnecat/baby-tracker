@@ -383,7 +383,7 @@ const householdsOpenFailureLogged = new Set();
  * file doesn't stop other households from logging in or using their
  * sessions and API tokens.
  */
-function allHouseholdDbs() {
+export function allHouseholdDbs() {
   const result = [];
   for (const slug of listHouseholdSlugs()) {
     if (unavailableHouseholds.has(slug)) continue;
@@ -435,6 +435,22 @@ function findAcrossHouseholds(query) {
     if (result) return { slug, db, result };
   }
   return null;
+}
+
+/**
+ * Records which user is Mum for a household, from the add-on configuration (the web UI can't
+ * change it — the admin decides). `username` null/unknown clears it, so removing the option and
+ * restarting really takes effect. Run it after migrations (the column is added by migration 4).
+ * Returns the resolved user id, or null.
+ */
+export function setHouseholdMom(slug, username) {
+  const db = getHouseholdDb(slug);
+  const user = username ? db.prepare(`SELECT id FROM users WHERE username = ?`).get(username) : null;
+  db.prepare(
+    `INSERT INTO settings (id, mom_user_id) VALUES (1, ?)
+     ON CONFLICT(id) DO UPDATE SET mom_user_id = excluded.mom_user_id`
+  ).run(user?.id ?? null);
+  return user?.id ?? null;
 }
 
 export function findHouseholdBySessionToken(token) {

@@ -8,6 +8,7 @@ export function requireAuth(req, res, next) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
   req.db = found.db;
+  req.householdSlug = found.slug;
   req.user = found.result;
   req.sessionToken = token;
   next();

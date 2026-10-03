@@ -68,6 +68,18 @@ const MIGRATIONS = [
     },
     log: 'Added settings.hide_baby_medication',
   },
+  {
+    version: 4,
+    run: (db) => {
+      // The notification_prefs / medication_reminders tables come from schema.sql (CREATE IF NOT
+      // EXISTS on every open); only the new settings column needs an explicit ALTER.
+      const columns = db.prepare(`PRAGMA table_info(settings)`).all();
+      if (!columns.some((c) => c.name === 'mom_user_id')) {
+        db.exec(`ALTER TABLE settings ADD COLUMN mom_user_id INTEGER`);
+      }
+    },
+    log: 'Added settings.mom_user_id for email reminders',
+  },
 ];
 
 export function runMigrations(db) {
