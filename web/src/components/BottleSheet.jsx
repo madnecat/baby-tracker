@@ -1,16 +1,25 @@
 import { useState } from 'react';
 import { Sheet } from './Sheet.jsx';
-import { api } from '../api/client.js';
+import { api, errorMessage } from '../api/client.js';
+import { t, tOr } from '../i18n/index.js';
+import { parseDecimal } from '../lib/parseDecimal.js';
+import { readNumberField } from '../lib/numberField.js';
 
 const PRESETS = [30, 60, 90, 120, 150];
 
 export function BottleSheet({ onClose, onSaved }) {
-  const [volumeMl, setVolumeMl] = useState(90);
+  // Raw text as typed (so a half-typed "2," survives a keystroke); parsed only on submit.
+  const [volumeMl, setVolumeMl] = useState('90');
   const [contents, setContents] = useState('formula');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
   async function submit() {
+    const volume = readNumberField(volumeMl, { required: true, min: 0, minExclusive: true });
+    if (volume.invalid) {
+      setError(t('sheets.invalidNumber'));
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -19,35 +28,35 @@ export function BottleSheet({ onClose, onSaved }) {
         type: 'bottle',
         startedAt: now,
         endedAt: now,
-        details: { volumeMl: Number(volumeMl), contents },
+        details: { volumeMl: volume.value, contents },
       });
       onSaved();
     } catch (e) {
-      setError(e.message);
+      setError(errorMessage(e));
       setSaving(false);
     }
   }
 
   return (
-    <Sheet title="Bottle" onClose={onClose}>
+    <Sheet title={t('sheets.bottle.title')} onClose={onClose}>
       <div className="choice-row">
         {PRESETS.map((v) => (
           <button
             key={v}
             type="button"
-            className={`choice-btn${volumeMl === v ? ' selected' : ''}`}
-            onClick={() => setVolumeMl(v)}
+            className={`choice-btn${parseDecimal(volumeMl) === v ? ' selected' : ''}`}
+            onClick={() => setVolumeMl(String(v))}
           >
-            {v} mL
+            {t('sheets.bottle.preset', { volume: v })}
           </button>
         ))}
       </div>
       <div className="field">
-        <label htmlFor="volume">Volume (mL)</label>
+        <label htmlFor="volume">{t('sheets.bottle.volume')}</label>
         <input
           id="volume"
-          type="number"
-          min="0"
+          type="text"
+          inputMode="decimal"
           value={volumeMl}
           onChange={(e) => setVolumeMl(e.target.value)}
         />
@@ -60,13 +69,13 @@ export function BottleSheet({ onClose, onSaved }) {
             className={`choice-btn${contents === c ? ' selected' : ''}`}
             onClick={() => setContents(c)}
           >
-            {c === 'formula' ? 'Formula' : c === 'breast_milk' ? 'Breast milk' : 'Mixed'}
+            {tOr('sheets.bottle.contents', c)}
           </button>
         ))}
       </div>
       {error && <p className="error-text">{error}</p>}
       <button className="btn btn-primary btn-block" disabled={saving} onClick={submit}>
-        {saving ? 'Saving…' : 'Log bottle'}
+        {saving ? t('common.saving') : t('sheets.bottle.submit')}
       </button>
     </Sheet>
   );

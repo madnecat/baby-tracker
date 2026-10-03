@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Sheet } from './Sheet.jsx';
-import { api } from '../api/client.js';
+import { api, errorMessage } from '../api/client.js';
 import { AFTER_FEED, FEED_TAGS } from '../lib/breastfeeding.js';
+import { t } from '../i18n/index.js';
+import { tRich } from '../i18n/rich.jsx';
 
 /**
  * Optional "how did it go?" after a breastfeed is stopped. `event` is the finished feed exactly
@@ -20,7 +22,7 @@ export function FeedQualitySheet({ event, onClose, onSaved }) {
   const nothingChosen = tags.length === 0 && !afterFeed;
 
   function toggleTag(key) {
-    setTags((current) => (current.includes(key) ? current.filter((t) => t !== key) : [...current, key]));
+    setTags((current) => (current.includes(key) ? current.filter((k) => k !== key) : [...current, key]));
   }
 
   async function save() {
@@ -33,31 +35,31 @@ export function FeedQualitySheet({ event, onClose, onSaved }) {
       await api.updateEvent(event.id, { details });
       onSaved();
     } catch (e) {
-      setError(e.message);
+      setError(errorMessage(e));
       setSaving(false);
     }
   }
 
   return (
-    <Sheet title="How did the feed go?" onClose={onClose}>
+    <Sheet title={t('sheets.feedQuality.title')} onClose={onClose}>
       <p style={{ marginTop: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-        Optional — tick whatever you noticed.
+        {t('sheets.feedQuality.hint')}
       </p>
       <div className="choice-row" style={{ flexWrap: 'wrap' }}>
-        {FEED_TAGS.map((t) => (
+        {FEED_TAGS.map((tag) => (
           <button
-            key={t.key}
+            key={tag.key}
             type="button"
-            className={`choice-btn${tags.includes(t.key) ? ' selected' : ''}`}
-            onClick={() => toggleTag(t.key)}
+            className={`choice-btn${tags.includes(tag.key) ? ' selected' : ''}`}
+            onClick={() => toggleTag(tag.key)}
           >
-            {t.label}
+            {t(tag.labelKey)}
           </button>
         ))}
       </div>
 
       <label style={{ display: 'block', margin: '14px 0 6px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-        Afterwards, baby…
+        {t('sheets.feedQuality.afterwards')}
       </label>
       <div className="choice-row">
         {AFTER_FEED.map((a) => (
@@ -67,7 +69,7 @@ export function FeedQualitySheet({ event, onClose, onSaved }) {
             className={`choice-btn${afterFeed === a.key ? ' selected' : ''}`}
             onClick={() => setAfterFeed(afterFeed === a.key ? null : a.key)}
           >
-            {a.label}
+            {t(a.labelKey)}
           </button>
         ))}
       </div>
@@ -75,14 +77,16 @@ export function FeedQualitySheet({ event, onClose, onSaved }) {
       {error && <p className="error-text">{error}</p>}
       <div className="btn-row" style={{ marginTop: 16 }}>
         <button className="btn btn-block" disabled={saving} onClick={onClose}>
-          Skip
+          {t('common.skip')}
         </button>
         <button className="btn btn-primary btn-block" disabled={saving || nothingChosen} onClick={save}>
-          {saving ? 'Saving…' : 'Save'}
+          {saving ? t('common.saving') : t('common.save')}
         </button>
       </div>
       <p style={{ margin: '12px 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-        You can turn this question off in <Link to="/settings">Settings</Link>.
+        {tRich('sheets.feedQuality.footnote', {
+          link: <Link to="/settings">{t('sheets.feedQuality.settingsLink')}</Link>,
+        })}
       </p>
     </Sheet>
   );

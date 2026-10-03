@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/requireAuth.js';
+import { sendServiceError } from './errorCodes.js';
 import { createEvent, deleteEvent, getActiveEvent, listEvents, updateEvent } from '../eventsService.js';
 
 export const eventsRouter = Router();
@@ -12,7 +13,7 @@ eventsRouter.get('/', (req, res) => {
 
 eventsRouter.get('/active', (req, res) => {
   const { type } = req.query;
-  if (!type) return res.status(400).json({ error: 'type query param is required' });
+  if (!type) return res.status(400).json({ error: 'type query param is required', code: 'EVENT_TYPE_REQUIRED' });
   res.json(getActiveEvent(req.db, type));
 });
 
@@ -22,7 +23,7 @@ eventsRouter.post('/', (req, res) => {
     const event = createEvent(req.db, { type, startedAt, endedAt, details, createdBy: req.user.id });
     res.status(201).json(event);
   } catch (e) {
-    res.status(400).json({ error: e.message });
+    sendServiceError(res, 400, e);
   }
 });
 
@@ -30,7 +31,7 @@ eventsRouter.patch('/:id', (req, res) => {
   try {
     res.json(updateEvent(req.db, req.params.id, req.body || {}));
   } catch (e) {
-    res.status(404).json({ error: e.message });
+    sendServiceError(res, 404, e);
   }
 });
 

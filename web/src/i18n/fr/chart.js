@@ -1,0 +1,36 @@
+// Graphiques et carte des remarques d’allaitement.
+export default {
+  'chart.contractions.title': 'Contractions',
+  'chart.contractions.empty': 'Aucune contraction sur les dernières {range}.',
+  'chart.contractions.summaryLine': 'Dernières {range} — {summary}',
+  'chart.contractions.count_one': '{count} contraction',
+  'chart.contractions.count_other': '{count} contractions',
+  'chart.contractions.every': 'toutes les ~{duration}',
+  'chart.contractions.each': '~{duration} chacune',
+  'chart.contractions.hint': 'Comme un tracé de monitoring des contractions : la largeur de chaque plateau = la durée, la hauteur = l’intensité, les parties plates = l’intervalle entre les contractions.',
+
+  'chart.intensity.mild': 'légère',
+  'chart.intensity.moderate': 'modérée',
+  'chart.intensity.strong': 'forte',
+  'chart.intensity.unspecified': 'non précisée',
+
+  'chart.growth.ageMonths': 'Âge (mois)',
+  'chart.growth.monthsShort': '{v} mois',
+  'chart.growth.yourBaby': 'Votre bébé',
+
+  'chart.feedInsights.title_one': 'Remarques d’allaitement · dernier jour',
+  'chart.feedInsights.title_other': 'Remarques d’allaitement · {count} derniers jours',
+  'chart.feedInsights.feeds_one': '{count} tétée',
+  'chart.feedInsights.feeds_other': '{count} tétées',
+  'chart.feedInsights.summary': '{feeds}, dont {observed} avec remarques',
+  'chart.feedInsights.pct': '{n} %',
+  'chart.feedInsights.ariaItem': '{label} : {feeds}',
+  'chart.feedInsights.segment': '{label} : {feeds} ({pct})',
+  'chart.feedInsights.row': '{count} · {pct}',
+  'chart.feedInsights.rowTypical': 'généralement {duration} · {count} · {pct}',
+  'chart.feedInsights.fullLabel': 'Satiété apparente ensuite',
+  'chart.feedInsights.fullRatio': '{satisfied} sur {answered} · {pct}',
+  'chart.feedInsights.fullAria_one': 'Satiété apparente après {satisfied} tétée sur {answered}',
+  'chart.feedInsights.fullAria_other': 'Satiété apparente après {satisfied} tétées sur {answered}',
+  'chart.feedInsights.disclaimer': 'D’après vos propres remarques (durée typique = durée médiane). Ce n’est pas une évaluation médicale : parlez-en à votre sage-femme, à votre médecin ou à la PMI si l’allaitement vous inquiète.',
+};

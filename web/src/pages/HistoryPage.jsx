@@ -2,14 +2,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client.js';
 import { EditEventSheet } from '../components/EditEventSheet.jsx';
 import { EditGrowthSheet } from '../components/EditGrowthSheet.jsx';
-import { EVENT_COLORS, resolve as resolveColor } from '../lib/palette.js';
+import { EVENT_COLORS, eventTypeLabel, resolve as resolveColor } from '../lib/palette.js';
 import { useColorScheme } from '../lib/useColorScheme.js';
-import { dayKey, formatDateTime, formatDuration } from '../lib/dateUtils.js';
+import { dayKey, formatDateOnly, formatDateTime, formatDuration } from '../lib/dateUtils.js';
 import { describeSides, observationsText } from '../lib/breastfeeding.js';
+import { formatNumber, intlLocale, t, tOr } from '../i18n/index.js';
 import {
   getMedicationStatus,
   lastDoseFor,
   loggedMedicationNames,
+  medicationDisplayName,
   medicationsFor,
   nextDoseInfo,
 } from '../lib/medications.js';
@@ -19,36 +21,78 @@ import {
 const TYPES = ['diaper', 'bottle', 'breastfeeding', 'outing', 'temperature', 'sleep', 'growth', 'medication'];
 const MED_PREFIX = 'med:';
 
+// A number for people ("2,5" in French); stored values that are not numbers show as they are.
+function shownNumber(value) {
+  if (value == null) return '?';
+  return typeof value === 'number' ? formatNumber(value) : String(value);
+}
+
+// Locale-aware list ("a, b" / "a et b"), so no separator is written by hand.
+function joinList(parts) {
+  return new Intl.ListFormat(intlLocale(), { style: 'short', type: 'unit' }).format(parts);
+}
+
 function summarize(item) {
   const d = item.details || {};
   switch (item.type) {
     case 'diaper': {
       const parts = [];
-      if (d.wet) parts.push('wet');
-      if (d.dirty) parts.push(d.consistency ? `dirty — ${d.consistency}` : 'dirty');
-      return `Diaper (${parts.join(', ') || 'none noted'})`;
+      if (d.wet) parts.push(t('history.diaper.wet'));
+      if (d.dirty) {
+        parts.push(
+          d.consistency
+            ? t('history.diaper.dirtyConsistency', { consistency: tOr('diaper.consistency', d.consistency) })
+            : t('history.diaper.dirty')
+        );
+      }
+      return parts.length
+        ? t('history.summary.diaper', { parts: joinList(parts) })
+        : t('history.summary.diaperNone');
     }
     case 'bottle':
-      return `Bottle — ${d.volumeMl ?? '?'} mL (${d.contents ?? '?'})`;
+      return t('history.summary.bottle', {
+        volume: shownNumber(d.volumeMl),
+        contents: d.contents == null ? '?' : tOr('history.contents', d.contents),
+      });
     case 'breastfeeding':
-      return `Breastfeeding — ${describeSides(d)} — ${formatDuration(item.startedAt, item.endedAt)}`;
+      return t('history.summary.breastfeeding', {
+        sides: describeSides(d),
+        duration: formatDuration(item.startedAt, item.endedAt),
+      });
     case 'outing':
-      return `Outing${d.location ? ` — ${d.location}` : ''} — ${formatDuration(item.startedAt, item.endedAt)}`;
+      return d.location
+        ? t('history.summary.outingAt', {
+            location: d.location,
+            duration: formatDuration(item.startedAt, item.endedAt),
+          })
+        : t('history.summary.outing', { duration: formatDuration(item.startedAt, item.endedAt) });
     case 'temperature':
-      return `Temperature (${d.who || 'baby'}) — ${d.valueC ?? '?'}°C`;
-    case 'medication':
-      return `${d.name ?? 'Medication'}${d.doseAmount ? ` — ${d.doseAmount}${d.doseUnit || ''}` : ''}`;
+      return t('history.summary.temperature', {
+        who: tOr('history.who', d.who || 'baby'),
+        value: shownNumber(d.valueC),
+      });
+    case 'medication': {
+      const name = d.name != null ? medicationDisplayName(d.name) : eventTypeLabel('medication');
+      if (!d.doseAmount) return name;
+      return d.doseUnit
+        ? t('history.summary.medicationDose', { name, amount: shownNumber(d.doseAmount), unit: d.doseUnit })
+        : t('history.summary.medicationDoseNoUnit', { name, amount: shownNumber(d.doseAmount) });
+    }
     case 'sleep':
-      return `Sleep — ${formatDuration(item.startedAt, item.endedAt)}`;
+      return t('history.summary.sleep', { duration: formatDuration(item.startedAt, item.endedAt) });
     case 'growth': {
       const parts = [];
-      if (item.weightKg != null) parts.push(`${item.weightKg} kg`);
-      if (item.heightCm != null) parts.push(`${item.heightCm} cm`);
-      if (item.headCircumferenceCm != null) parts.push(`HC ${item.headCircumferenceCm} cm`);
-      return `Growth — ${parts.join(', ') || 'no values'}`;
+      if (item.weightKg != null) parts.push(t('history.growth.weight', { value: shownNumber(item.weightKg) }));
+      if (item.heightCm != null) parts.push(t('history.growth.height', { value: shownNumber(item.heightCm) }));
+      if (item.headCircumferenceCm != null) {
+        parts.push(t('history.growth.head', { value: shownNumber(item.headCircumferenceCm) }));
+      }
+      return parts.length
+        ? t('history.summary.growth', { parts: joinList(parts) })
+        : t('history.summary.growthNone');
     }
     default:
-      return item.type;
+      return eventTypeLabel(item.type);
   }
 }
 
@@ -56,20 +100,20 @@ function BabyMedicationStatus({ names, lastDoseByName, hidden, isDark, onToggle 
   const [, setTick] = useState(0);
 
   useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 30000);
+    const id = setInterval(() => setTick((n) => n + 1), 30000);
     return () => clearInterval(id);
   }, []);
 
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h2 className="section-title">Baby medication status</h2>
+        <h2 className="section-title">{t('history.medStatusTitle')}</h2>
         <button className="chip" onClick={onToggle}>
-          {hidden ? 'Show' : 'Hide'}
+          {hidden ? t('history.show') : t('history.hide')}
         </button>
       </div>
-      {hidden && <div className="empty-state">Medication status hidden.</div>}
-      {!hidden && names.length === 0 && <div className="empty-state">No baby medication logged yet.</div>}
+      {hidden && <div className="empty-state">{t('history.medStatusHidden')}</div>}
+      {!hidden && names.length === 0 && <div className="empty-state">{t('history.noBabyMedication')}</div>}
       {!hidden &&
         names.map((name) => {
           const status = getMedicationStatus(lastDoseByName.get(name));
@@ -77,7 +121,7 @@ function BabyMedicationStatus({ names, lastDoseByName, hidden, isDark, onToggle 
             <div className="history-item static" key={name}>
               <span className="dot" style={{ background: resolveColor(EVENT_COLORS.medication, isDark) }} />
               <div className="details">
-                <div>{name}</div>
+                <div>{medicationDisplayName(name)}</div>
                 <div className="time">{status.sub}</div>
               </div>
             </div>
@@ -173,18 +217,18 @@ export default function HistoryPage() {
 
   return (
     <div>
-      <h1 className="page-title">History</h1>
+      <h1 className="page-title">{t('history.title')}</h1>
       <div className="filter-chips">
         <button className={`chip${!filter ? ' active' : ''}`} onClick={() => setFilter(null)}>
-          All
+          {t('history.all')}
         </button>
-        {TYPES.map((t) => (
+        {TYPES.map((type) => (
           <button
-            key={t}
-            className={`chip${filter === t ? ' active' : ''}`}
-            onClick={() => setFilter(t)}
+            key={type}
+            className={`chip${filter === type ? ' active' : ''}`}
+            onClick={() => setFilter(type)}
           >
-            {t}
+            {eventTypeLabel(type)}
           </button>
         ))}
         {medicationNames.map((n) => (
@@ -193,7 +237,7 @@ export default function HistoryPage() {
             className={`chip${filter === MED_PREFIX + n ? ' active' : ''}`}
             onClick={() => setFilter(MED_PREFIX + n)}
           >
-            {n}
+            {medicationDisplayName(n)}
           </button>
         ))}
       </div>
@@ -206,12 +250,12 @@ export default function HistoryPage() {
         onToggle={toggleMedicationStatus}
       />
 
-      {loading && <p>Loading…</p>}
-      {!loading && groups.length === 0 && <div className="empty-state">No events yet.</div>}
+      {loading && <p>{t('common.loading')}</p>}
+      {!loading && groups.length === 0 && <div className="empty-state">{t('history.empty')}</div>}
 
       {groups.map(([day, dayItems]) => (
         <div className="history-day" key={day}>
-          <h3>{day}</h3>
+          <h3>{formatDateOnly(dayItems[0].startedAt)}</h3>
           {dayItems.map((item) => (
             <div
               className="history-item"

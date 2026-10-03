@@ -2,28 +2,45 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client.js';
 import { EditEventSheet } from '../components/EditEventSheet.jsx';
 import { ContractionChart } from '../components/ContractionChart.jsx';
-import { EVENT_COLORS, resolve as resolveColor } from '../lib/palette.js';
+import { EVENT_COLORS, eventTypeLabel, resolve as resolveColor } from '../lib/palette.js';
 import { useColorScheme } from '../lib/useColorScheme.js';
-import { formatDateTime, formatDuration, dayKey } from '../lib/dateUtils.js';
+import { formatDateOnly, formatDateTime, formatDuration, dayKey } from '../lib/dateUtils.js';
+import { formatNumber, t, tOr } from '../i18n/index.js';
 import {
   getMedicationStatus,
   lastDoseFor,
   loggedMedicationNames,
+  medicationDisplayName,
   medicationsFor,
   nextDoseInfo,
 } from '../lib/medications.js';
 
+// A number for people ("2,5" in French); stored values that are not numbers show as they are.
+function shownNumber(value) {
+  if (value == null) return '?';
+  return typeof value === 'number' ? formatNumber(value) : String(value);
+}
+
 function summarize(event) {
   const d = event.details || {};
   switch (event.type) {
-    case 'contraction':
-      return `Contraction${d.intensity ? ` — ${d.intensity}` : ' — intensity not recorded'} — ${formatDuration(event.startedAt, event.endedAt)}`;
-    case 'medication':
-      return `${d.name ?? 'Medication'}${d.doseAmount ? ` — ${d.doseAmount}${d.doseUnit || ''}` : ''}`;
+    case 'contraction': {
+      const duration = formatDuration(event.startedAt, event.endedAt);
+      return d.intensity
+        ? t('mum.summary.contraction', { intensity: tOr('mum.intensity', d.intensity), duration })
+        : t('mum.summary.contractionNoIntensity', { duration });
+    }
+    case 'medication': {
+      const name = d.name != null ? medicationDisplayName(d.name) : eventTypeLabel('medication');
+      if (!d.doseAmount) return name;
+      return d.doseUnit
+        ? t('mum.summary.medicationDose', { name, amount: shownNumber(d.doseAmount), unit: d.doseUnit })
+        : t('mum.summary.medicationDoseNoUnit', { name, amount: shownNumber(d.doseAmount) });
+    }
     case 'temperature':
-      return `Temperature — ${d.valueC ?? '?'}°C`;
+      return t('mum.summary.temperature', { value: shownNumber(d.valueC) });
     default:
-      return event.type;
+      return eventTypeLabel(event.type);
   }
 }
 
@@ -67,19 +84,19 @@ function ContractionHistory({ contractions, hidden, isDark, onSelect, onToggle }
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h2 className="section-title">Contraction events</h2>
+        <h2 className="section-title">{t('mum.contractionsTitle')}</h2>
         <button className="chip" onClick={onToggle}>
-          {hidden ? 'Show' : 'Hide'}
+          {hidden ? t('mum.show') : t('mum.hide')}
         </button>
       </div>
 
-      {hidden && <div className="empty-state">Contractions hidden.</div>}
-      {!hidden && groups.length === 0 && <div className="empty-state">No contractions logged.</div>}
+      {hidden && <div className="empty-state">{t('mum.contractionsHidden')}</div>}
+      {!hidden && groups.length === 0 && <div className="empty-state">{t('mum.noContractions')}</div>}
 
       {!hidden &&
         groups.map(([day, items]) => (
           <div className="history-day" key={day}>
-            <h3>{day}</h3>
+            <h3>{formatDateOnly(items[0].event.startedAt)}</h3>
             {items.map(({ event, previous }) => (
               <div className="history-item" key={event.id} onClick={() => onSelect(event)}>
                 <span className="dot" style={{ background: resolveColor(EVENT_COLORS.contraction, isDark) }} />
@@ -88,7 +105,9 @@ function ContractionHistory({ contractions, hidden, isDark, onSelect, onToggle }
                   <div className="time">{formatDateTime(event.startedAt)}</div>
                   {previous && (
                     <div className="time">
-                      {formatDuration(previous.startedAt, event.startedAt)} after previous
+                      {t('mum.afterPrevious', {
+                        duration: formatDuration(previous.startedAt, event.startedAt),
+                      })}
                     </div>
                   )}
                 </div>
@@ -104,21 +123,21 @@ function MedicationStatusList({ names, lastDoseByName, isDark }) {
   const [, setTick] = useState(0);
 
   useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 30000);
+    const id = setInterval(() => setTick((n) => n + 1), 30000);
     return () => clearInterval(id);
   }, []);
 
   return (
     <>
-      <h2 className="section-title">Medication status</h2>
-      {names.length === 0 && <div className="empty-state">No medication logged yet.</div>}
+      <h2 className="section-title">{t('mum.medStatusTitle')}</h2>
+      {names.length === 0 && <div className="empty-state">{t('mum.noMedication')}</div>}
       {names.map((name) => {
         const status = getMedicationStatus(lastDoseByName.get(name));
         return (
           <div className="history-item static" key={name}>
             <span className="dot" style={{ background: resolveColor(EVENT_COLORS.medication, isDark) }} />
             <div className="details">
-              <div>{name}</div>
+              <div>{medicationDisplayName(name)}</div>
               <div className="time">{status.sub}</div>
             </div>
           </div>
@@ -154,10 +173,10 @@ function MedicationHistory({ medications, names, lastDoseByName, isDark, onSelec
 
   return (
     <>
-      <h2 className="section-title">Medication history</h2>
+      <h2 className="section-title">{t('mum.medHistoryTitle')}</h2>
       <div className="filter-chips">
         <button className={`chip${!nameFilter ? ' active' : ''}`} onClick={() => setNameFilter(null)}>
-          All
+          {t('mum.all')}
         </button>
         {names.map((n) => (
           <button
@@ -165,16 +184,16 @@ function MedicationHistory({ medications, names, lastDoseByName, isDark, onSelec
             className={`chip${nameFilter === n ? ' active' : ''}`}
             onClick={() => setNameFilter(n)}
           >
-            {n}
+            {medicationDisplayName(n)}
           </button>
         ))}
       </div>
 
-      {groups.length === 0 && <div className="empty-state">No medication logged yet.</div>}
+      {groups.length === 0 && <div className="empty-state">{t('mum.noMedication')}</div>}
 
       {groups.map(([day, items]) => (
         <div className="history-day" key={day}>
-          <h3>{day}</h3>
+          <h3>{formatDateOnly(items[0].startedAt)}</h3>
           {items.map((event) => {
             const next = nextDoseInfo(event);
             const isLatestForName = lastDoseByName.get(event.details?.name)?.id === event.id;
@@ -239,11 +258,11 @@ export default function MumPage() {
     [events]
   );
 
-  if (loading) return <p>Loading…</p>;
+  if (loading) return <p>{t('common.loading')}</p>;
 
   return (
     <div>
-      <h1 className="page-title">Mum</h1>
+      <h1 className="page-title">{t('mum.title')}</h1>
 
       {!hideContractions && <ContractionChart contractions={contractions} />}
 
@@ -263,11 +282,11 @@ export default function MumPage() {
         onSelect={setEditing}
       />
       <Section
-        title="Temperature"
+        title={t('mum.temperatureTitle')}
         items={temperatures.slice().reverse()}
         isDark={isDark}
         onSelect={setEditing}
-        emptyText="No temperature readings logged."
+        emptyText={t('mum.noTemperature')}
       />
 
       {editing && (

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext.jsx';
+import { errorMessage } from '../api/client.js';
+import { t } from '../i18n/index.js';
 
 export default function LoginPage() {
   const { user, loading, login } = useAuth();
@@ -18,7 +20,7 @@ export default function LoginPage() {
     try {
       await login(username, password);
     } catch (err) {
-      setError(err.message);
+      setError(errorMessage(err));
       setSubmitting(false);
     }
   }
@@ -29,7 +31,7 @@ export default function LoginPage() {
         <h1>👶 Baby Tracker</h1>
         <form onSubmit={submit}>
           <div className="field">
-            <label htmlFor="username">Username</label>
+            <label htmlFor="username">{t('login.username')}</label>
             <input
               id="username"
               autoComplete="username"
@@ -39,7 +41,7 @@ export default function LoginPage() {
             />
           </div>
           <div className="field">
-            <label htmlFor="password">Password</label>
+            <label htmlFor="password">{t('login.password')}</label>
             <input
               id="password"
               type="password"
@@ -51,7 +53,7 @@ export default function LoginPage() {
           </div>
           {error && <p className="error-text">{error}</p>}
           <button className="btn btn-primary btn-block" disabled={submitting}>
-            {submitting ? 'Signing in…' : 'Sign in'}
+            {submitting ? t('login.signingIn') : t('login.signIn')}
           </button>
         </form>
       </div>

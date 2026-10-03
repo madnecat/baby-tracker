@@ -19,7 +19,7 @@ export default {
   'language.title': 'Langue',
   'language.label': "Langue de l'application",
   'language.hint':
-    "Enregistrée sur cet appareil uniquement. Les emails de rappel utilisent la langue choisie au moment où vous enregistrez vos rappels par email.",
+    'Enregistrée sur votre compte : elle vous suit sur tous vos appareils. Les emails de rappel l’utilisent aussi.',
   'language.en': 'English',
   'language.fr': 'Français',
 };

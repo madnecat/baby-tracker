@@ -1,13 +1,64 @@
+import { withLocale } from '../i18n/testSetup.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  MEDICATION_PRESETS,
   getCustomPresets,
   getMedicationNames,
+  getMedicationStatus,
   lastDoseFor,
   loggedMedicationNames,
+  medicationDisplayName,
   medicationWho,
   medicationsFor,
+  nextDoseInfo,
+  presetWarning,
 } from './medications.js';
+
+const AT = Date.parse('2026-10-03T10:00:00.000Z');
+const HOUR = 3600000;
+
+test('status lines in English', () => {
+  assert.equal(getMedicationStatus(null, AT).sub, 'Not logged recently');
+  const d = { startedAt: new Date(AT - HOUR).toISOString(), details: { intervalHours: 6 } };
+  assert.match(getMedicationStatus(d, AT).sub, /^Wait 5h 0m \(until \d\d:\d\d\)$/);
+  assert.equal(getMedicationStatus(d, AT + 6 * HOUR).sub, 'Safe to take now');
+  assert.equal(getMedicationStatus({ startedAt: d.startedAt, details: {} }, AT).sub, 'Logged (interval unknown)');
+  const short = { startedAt: new Date(AT - 5.5 * HOUR).toISOString(), details: { intervalHours: 6 } };
+  assert.match(getMedicationStatus(short, AT).sub, /^Wait 30m /);
+  assert.match(nextDoseInfo(d, AT).label, /^Next dose safe from \w{3} \d{1,2} \w{3}, \d\d:\d\d$/);
+});
+
+test('status lines in French', () => {
+  withLocale('fr', () => {
+    assert.equal(getMedicationStatus(null, AT).sub, 'Aucune prise récente');
+    const d = { startedAt: new Date(AT - HOUR).toISOString(), details: { intervalHours: 6 } };
+    assert.match(getMedicationStatus(d, AT).sub, /^Attendre 5\u00A0h 0\u00A0min \(jusqu'à \d\d:\d\d\)$/);
+    assert.equal(getMedicationStatus(d, AT + 6 * HOUR).sub, 'Prise possible maintenant');
+    assert.match(nextDoseInfo(d, AT).label, /^Prochaine prise possible\u00A0: /);
+  });
+});
+
+test('preset display names are translated, custom and unknown names are untouched', () => {
+  assert.equal(medicationDisplayName('Paracetamol'), 'Paracetamol');
+  withLocale('fr', () => {
+    assert.equal(medicationDisplayName('Paracetamol'), 'Paracétamol');
+    assert.equal(medicationDisplayName('Co-codamol (codeine)'), 'Co-codamol (codéine)');
+    assert.equal(medicationDisplayName('Calpol'), 'Calpol');
+  });
+  // stored identifiers never change
+  assert.deepEqual(MEDICATION_PRESETS.map((p) => p.name), [
+    'Paracetamol', 'Ibuprofen', 'Diclofenac', 'Dihydrocodeine', 'Co-codamol (codeine)',
+  ]);
+});
+
+test('warnings resolve at call time and co-codamol stays an explicit "against"', () => {
+  const coco = MEDICATION_PRESETS.find((p) => p.key === 'co-codamol');
+  assert.match(presetWarning(coco), /AGAINST codeine/);
+  assert.match(coco.warning, /AGAINST codeine/);
+  withLocale('fr', () => assert.match(presetWarning(coco), /NE PAS prendre de codéine/));
+  assert.equal(presetWarning(MEDICATION_PRESETS[0]), null);
+});
 
 const dose = (id, name, who, extra = {}) => ({
   id,

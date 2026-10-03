@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
-import { api } from '../api/client.js';
+import { api, errorMessage } from '../api/client.js';
+import { t } from '../i18n/index.js';
 
 const hint = { marginTop: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' };
 
+// The language of the reminder emails is the person's app language, stored on their account and
+// used by the server — nothing about language is sent from here.
 export function EmailRemindersSection() {
   const [info, setInfo] = useState(null);
   const [enabled, setEnabled] = useState(false);
   const [email, setEmail] = useState('');
-  const [language, setLanguage] = useState('en');
   const [busy, setBusy] = useState(null); // 'save' | 'test' | 'ask'
   const [status, setStatus] = useState(null);
 
@@ -15,7 +17,6 @@ export function EmailRemindersSection() {
     setInfo(data);
     setEnabled(data.enabled);
     setEmail(data.email);
-    setLanguage(data.language);
   }
 
   useEffect(() => {
@@ -25,15 +26,15 @@ export function EmailRemindersSection() {
       .catch(() => setInfo(null));
   }, []);
 
-  async function run(kind, action, okMessage) {
+  async function run(kind, action, okMessageKey) {
     setBusy(kind);
     setStatus(null);
     try {
       const result = await action();
       if (result) apply({ ...info, ...result });
-      setStatus({ ok: true, message: okMessage });
+      setStatus({ ok: true, message: t(okMessageKey) });
     } catch (err) {
-      setStatus({ ok: false, message: err.message });
+      setStatus({ ok: false, message: errorMessage(err) });
     } finally {
       setBusy(null);
     }
@@ -41,26 +42,22 @@ export function EmailRemindersSection() {
 
   const save = (e) => {
     e.preventDefault();
-    return run('save', () => api.updateNotifications({ enabled, email, language }), 'Saved.');
+    return run('save', () => api.updateNotifications({ enabled, email }), 'emailReminders.saved');
   };
 
   if (!info) return null;
 
-  const dirty = enabled !== info.enabled || email.trim() !== info.email || language !== info.language;
+  const dirty = enabled !== info.enabled || email.trim() !== info.email;
 
   return (
     <>
-      <h2 className="section-title">Email reminders</h2>
+      <h2 className="section-title">{t('emailReminders.title')}</h2>
       <div className="card" style={{ marginBottom: 20 }}>
         {!info.available ? (
-          <p style={{ ...hint, marginBottom: 0 }}>Email reminders are not available on this server.</p>
+          <p style={{ ...hint, marginBottom: 0 }}>{t('emailReminders.unavailable')}</p>
         ) : (
           <>
-            <p style={hint}>
-              Get an email when the waiting time between doses of a medication is over. The email
-              never names the medication — it only says whether it is for Mum or Baby, with a link
-              back here. Mum's reminders go to Mum only; Baby's go to every parent who turns this on.
-            </p>
+            <p style={hint}>{t('emailReminders.hint')}</p>
             <form onSubmit={save}>
               <div className="field">
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -70,34 +67,23 @@ export function EmailRemindersSection() {
                     onChange={(e) => setEnabled(e.target.checked)}
                     style={{ width: 'auto' }}
                   />
-                  Email me when a dose can be taken again
+                  {t('emailReminders.enable')}
                 </label>
               </div>
               <div className="field">
-                <label htmlFor="reminder-email">Email address</label>
+                <label htmlFor="reminder-email">{t('emailReminders.emailLabel')}</label>
                 <input
                   id="reminder-email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   autoComplete="email"
-                  placeholder="you@example.com"
+                  placeholder={t('emailReminders.emailPlaceholder')}
                 />
-              </div>
-              <div className="field">
-                <label htmlFor="reminder-language">Email language</label>
-                <select
-                  id="reminder-language"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                >
-                  <option value="en">English</option>
-                  <option value="fr">Français</option>
-                </select>
               </div>
               {status && <p className={status.ok ? 'success-text' : 'error-text'}>{status.message}</p>}
               <button className="btn btn-primary btn-block" disabled={busy !== null || !dirty}>
-                {busy === 'save' ? 'Saving…' : 'Save'}
+                {busy === 'save' ? t('common.saving') : t('common.save')}
               </button>
             </form>
             <button
@@ -105,27 +91,22 @@ export function EmailRemindersSection() {
               className="btn btn-block"
               style={{ marginTop: 8 }}
               disabled={busy !== null || dirty || !info.email}
-              onClick={() => run('test', () => api.sendTestEmail(), 'Test email sent.')}
+              onClick={() => run('test', () => api.sendTestEmail(), 'emailReminders.testSent')}
             >
-              {busy === 'test' ? 'Sending…' : 'Send test email'}
+              {busy === 'test' ? t('common.sending') : t('emailReminders.sendTest')}
             </button>
 
             {!info.momConfigured && (
               <div style={{ marginTop: 16 }}>
-                <p style={hint}>
-                  Mum isn't set up for this household yet, so Mum's medication reminders can't be
-                  sent (Baby's still can). Only the administrator can set this up.
-                </p>
+                <p style={hint}>{t('emailReminders.momNotSetUp')}</p>
                 {info.canAskAdmin && (
                   <button
                     type="button"
                     className="btn btn-block"
                     disabled={busy !== null}
-                    onClick={() =>
-                      run('ask', () => api.requestMomSetup(), 'Request sent to the administrator.')
-                    }
+                    onClick={() => run('ask', () => api.requestMomSetup(), 'emailReminders.requestSent')}
                   >
-                    {busy === 'ask' ? 'Sending…' : 'Ask the administrator to set it up'}
+                    {busy === 'ask' ? t('common.sending') : t('emailReminders.askAdmin')}
                   </button>
                 )}
               </div>

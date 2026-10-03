@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './lib/AuthContext.jsx';
+import { t } from './i18n/index.js';
 import { Layout } from './components/Layout.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import HomePage from './pages/HomePage.jsx';
@@ -11,7 +12,7 @@ import SettingsPage from './pages/SettingsPage.jsx';
 
 function ProtectedArea() {
   const { user, loading } = useAuth();
-  if (loading) return <div className="centered-message">Loading…</div>;
+  if (loading) return <div className="centered-message">{t('common.loading')}</div>;
   if (!user) return <Navigate to="/login" replace />;
   return (
     <Layout>

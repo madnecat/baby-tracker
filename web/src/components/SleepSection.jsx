@@ -3,31 +3,10 @@ import { normalizeSleeps, observedWakeWindows, predictNextSleep, sleepStats } fr
 import { EVENT_COLORS, resolve } from '../lib/palette.js';
 import { blockAt, sleepBlocks } from '../lib/sleepBand.js';
 import { useColorScheme } from '../lib/useColorScheme.js';
+import { formatClock, formatMinutes, formatMoment } from '../lib/dateUtils.js';
+import { t, tOr } from '../i18n/index.js';
 
 const DAY_MS = 86400000;
-
-const PHASE_LABEL = {
-  1: 'No day/night rhythm yet',
-  2: 'Day/night rhythm settled',
-  3: 'Settled nap regime',
-};
-
-function formatHm(minutes) {
-  const h = Math.floor(minutes / 60);
-  const m = Math.round(minutes % 60);
-  return h > 0 ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m`;
-}
-
-function formatClock(t) {
-  return new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
-/** A clock time, prefixed with "Yesterday" when it is not today — the band spans midnight. */
-function formatMoment(t, now) {
-  return new Date(t).toDateString() === new Date(now).toDateString()
-    ? formatClock(t)
-    : `Yesterday ${formatClock(t)}`;
-}
 
 /**
  * The last 24 hours as one band, sleep blocks over an awake ground.
@@ -115,13 +94,16 @@ function Timeline({ intervals, now, color }) {
         {chosen ? (
           <>
             <strong style={{ color: 'var(--text-primary)' }}>
-              {formatMoment(chosen.fullStart, now)} → {chosen.open ? 'now' : formatMoment(chosen.end, now)}
+              {t('sleep.range', {
+                from: formatMoment(chosen.fullStart, now),
+                to: chosen.open ? t('sleep.now') : formatMoment(chosen.end, now),
+              })}
             </strong>
             {' · '}
-            {formatHm((chosen.end - chosen.fullStart) / 60000)}
+            {formatMinutes((chosen.end - chosen.fullStart) / 60000)}
           </>
         ) : (
-          'Tap a sleep block for its times.'
+          t('sleep.tapHint')
         )}
       </div>
     </div>
@@ -155,8 +137,8 @@ export function SleepSection({ events, child }) {
   if (intervals.length === 0) {
     return (
       <>
-        <h2 className="section-title">Sleep</h2>
-        <div className="empty-state">No sleep logged yet.</div>
+        <h2 className="section-title">{t('sleep.title')}</h2>
+        <div className="empty-state">{t('sleep.empty')}</div>
       </>
     );
   }
@@ -167,39 +149,45 @@ export function SleepSection({ events, child }) {
 
   return (
     <>
-      <h2 className="section-title">Sleep</h2>
+      <h2 className="section-title">{t('sleep.title')}</h2>
 
       <div className="chart-card">
-        <h3>Last 24 hours</h3>
+        <h3>{t('sleep.last24h')}</h3>
         <div style={{ padding: '0 8px 8px' }}>
-          <div style={{ fontSize: '1.3rem', fontWeight: 600 }}>{formatHm(stats.rolling24)}</div>
+          <div style={{ fontSize: '1.3rem', fontWeight: 600 }}>{formatMinutes(stats.rolling24)}</div>
           <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-            Typical at this age: {Math.round(target.min / 60)}–{Math.round(target.max / 60)}h
-            {belowTarget ? ' · below the usual range' : ''}
+            {t(belowTarget ? 'sleep.typicalForAgeBelow' : 'sleep.typicalForAge', {
+              min: Math.round(target.min / 60),
+              max: Math.round(target.max / 60),
+            })}
           </div>
           <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: 4 }}>
-            {stats.sleepCount24} sleeps · longest {formatHm(stats.longestStretch24)}
+            {t('sleep.countLongest', {
+              count: stats.sleepCount24,
+              duration: formatMinutes(stats.longestStretch24),
+            })}
           </div>
         </div>
         <Timeline intervals={intervals} now={now} color={color} />
       </div>
 
       <div className="chart-card">
-        <h3>Wake windows</h3>
+        <h3>{t('sleep.wakeWindows')}</h3>
         <p style={{ margin: '0 8px 8px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-          Time awake between sleeps — what the prediction is learned from.
+          {t('sleep.wakeWindowsHint')}
         </p>
-        {recentWindows.length === 0 && <div className="empty-state">No complete wake windows yet.</div>}
+        {recentWindows.length === 0 && <div className="empty-state">{t('sleep.noWakeWindows')}</div>}
         {recentWindows.map((w) => (
           <div className="history-item static" key={w.wokeAt}>
             <span className="dot" style={{ background: color }} />
             <div className="details">
               <div>
-                {formatHm(w.minutes)}
-                {w.excluded ? ' — looks like a sleep went unlogged' : ''}
+                {w.excluded
+                  ? t('sleep.windowUnlogged', { duration: formatMinutes(w.minutes) })
+                  : formatMinutes(w.minutes)}
               </div>
               <div className="time">
-                Awake {formatClock(w.wokeAt)} → {formatClock(w.sleptAt)}
+                {t('sleep.awakeRange', { from: formatClock(w.wokeAt), to: formatClock(w.sleptAt) })}
               </div>
             </div>
           </div>
@@ -207,14 +195,19 @@ export function SleepSection({ events, child }) {
       </div>
 
       <p style={{ margin: '-8px 8px 20px', fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-        {PHASE_LABEL[prediction.phase]}
-        {prediction.napRegime ? ` · ${prediction.napRegime.naps} naps a day` : ''}
-        {prediction.nightWindow
-          ? ` · night sits around ${String(prediction.nightWindow.startHour).padStart(2, '0')}:00–${String(
-              prediction.nightWindow.endHour
-            ).padStart(2, '0')}:00`
-          : ''}
-        {prediction.disturbed ? ' · unsettled the last few days' : ''}
+        {[
+          tOr('sleep.phase', prediction.phase),
+          prediction.napRegime ? t('sleep.napsADay', { count: prediction.napRegime.naps }) : null,
+          prediction.nightWindow
+            ? t('sleep.nightWindow', {
+                from: formatClock(new Date(2000, 0, 1, prediction.nightWindow.startHour)),
+                to: formatClock(new Date(2000, 0, 1, prediction.nightWindow.endHour)),
+              })
+            : null,
+          prediction.disturbed ? t('sleep.unsettled') : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')}
       </p>
     </>
   );

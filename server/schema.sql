@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS users (
   username TEXT NOT NULL UNIQUE,
   display_name TEXT NOT NULL,
   password_hash TEXT NOT NULL,
+  -- The person's app language (also used for their reminder emails). NULL = never chosen yet.
+  language TEXT CHECK (language IN ('en','fr')),
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -65,6 +67,7 @@ CREATE TABLE IF NOT EXISTS notification_prefs (
   user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   email TEXT NOT NULL DEFAULT '',
   enabled INTEGER NOT NULL DEFAULT 0,
+  -- language is no longer used (the recipient's users.language decides); kept so old databases stay valid.
   language TEXT NOT NULL DEFAULT 'en' CHECK (language IN ('en','fr')),
   enabled_at TEXT
 );

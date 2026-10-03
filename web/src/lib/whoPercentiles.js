@@ -12,6 +12,8 @@ const TABLES = {
 };
 
 // Standard WHO percentile band z-scores.
+// `label` is the stable id ('3rd'…): it is the data key of each curve point and of WHO_BAND_COLORS,
+// never translate it. Show people percentileLabel(band.label) instead.
 export const PERCENTILE_BANDS = [
   { label: '3rd', z: -1.8808 },
   { label: '15th', z: -1.0364 },
@@ -19,6 +21,10 @@ export const PERCENTILE_BANDS = [
   { label: '85th', z: 1.0364 },
   { label: '97th', z: 1.8808 },
 ];
+
+// Display text of a percentile id ('3rd' -> '3e' in French). Lives in palette.js (no JSON import,
+// so it is testable under node) and is re-exported here for convenience.
+export { percentileLabel } from './palette.js';
 
 function getTable(indicator, sex) {
   const table = TABLES[indicator]?.[sex];

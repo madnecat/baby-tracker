@@ -1,18 +1,52 @@
+import { tOr, t } from '../i18n/index.js';
+
+/** Error thrown by every api call: `.status` (0 = no response at all), `.code` (server code), `.message`. */
+export class ApiError extends Error {
+  constructor(message, { status = 0, code } = {}) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code;
+  }
+}
+
+/**
+ * Text to show a person for a failed call: the translation of the server's `code`
+ * (`errors.<CODE>`), else the server's English message, else a generic translated sentence.
+ * Components use this instead of `err.message`.
+ */
+export function errorMessage(err) {
+  if (err?.code) {
+    const translated = tOr('errors', err.code, { status: err.status });
+    if (translated !== String(err.code)) return translated;
+  }
+  return err?.message || t('errors.generic');
+}
+
 async function request(path, options = {}) {
-  const res = await fetch(`/api${path}`, {
-    credentials: 'include',
-    headers: options.body ? { 'Content-Type': 'application/json' } : undefined,
-    ...options,
-  });
+  let res;
+  try {
+    res = await fetch(`/api${path}`, {
+      credentials: 'include',
+      headers: options.body ? { 'Content-Type': 'application/json' } : undefined,
+      ...options,
+    });
+  } catch {
+    throw new ApiError('Cannot reach the server', { status: 0, code: 'network' });
+  }
   if (!res.ok) {
     let message = `Request failed (${res.status})`;
+    let code = 'request_failed';
     try {
       const body = await res.json();
-      if (body?.error) message = body.error;
+      if (body?.error) {
+        message = body.error;
+        code = body.code;
+      }
     } catch {
       // ignore
     }
-    throw new Error(message);
+    throw new ApiError(message, { status: res.status, code });
   }
   if (res.status === 204) return null;
   return res.json();
@@ -23,6 +57,8 @@ export const api = {
     request('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
   logout: () => request('/auth/logout', { method: 'POST' }),
   session: () => request('/auth/session'),
+  updateLanguage: (language) =>
+    request('/auth/language', { method: 'PATCH', body: JSON.stringify({ language }) }),
   changePassword: (currentPassword, newPassword) =>
     request('/auth/password', {
       method: 'PATCH',

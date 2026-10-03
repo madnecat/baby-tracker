@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { format } from 'date-fns';
 import { api } from '../api/client.js';
 import { FrequencyChart } from '../components/FrequencyChart.jsx';
 import { GrowthPercentileChart } from '../components/GrowthPercentileChart.jsx';
@@ -8,13 +7,15 @@ import { FeedInsightsCard } from '../components/FeedInsightsCard.jsx';
 import { EVENT_COLORS, DIAPER_SUBTYPE_COLORS } from '../lib/palette.js';
 import { aggregateByDay } from '../lib/aggregate.js';
 import { sleepStats } from '../lib/sleep.js';
-import { ageInMonths } from '../lib/dateUtils.js';
+import { ageInMonths, formatDayShort } from '../lib/dateUtils.js';
+import { t } from '../i18n/index.js';
 
+// Labels are catalog keys (with the number as a placeholder), resolved when rendered.
 const RANGES = [
-  { label: '48h', days: 2 },
-  { label: '7d', days: 7 },
-  { label: '30d', days: 30 },
-  { label: '90d', days: 90 },
+  { labelKey: 'chartsPage.range.hours', n: 48, days: 2 },
+  { labelKey: 'chartsPage.range.days', n: 7, days: 7 },
+  { labelKey: 'chartsPage.range.days', n: 30, days: 30 },
+  { labelKey: 'chartsPage.range.days', n: 90, days: 90 },
 ];
 
 export default function ChartsPage() {
@@ -83,7 +84,7 @@ export default function ChartsPage() {
   const sleepData = useMemo(
     () =>
       sleepStats(events, child, Date.now(), rangeDays).perDay.map((row) => ({
-        day: format(new Date(row.dayStart), 'd MMM'),
+        day: formatDayShort(row.dayStart),
         hours: Math.round((row.minutes / 60) * 10) / 10,
       })),
     [events, child, rangeDays]
@@ -104,11 +105,11 @@ export default function ChartsPage() {
     return { weight, height, headCircumference };
   }, [growth, child]);
 
-  if (loading) return <p>Loading…</p>;
+  if (loading) return <p>{t('common.loading')}</p>;
 
   return (
     <div>
-      <h1 className="page-title">Charts</h1>
+      <h1 className="page-title">{t('chartsPage.title')}</h1>
 
       <div className="range-tabs">
         {RANGES.map((r) => (
@@ -117,65 +118,65 @@ export default function ChartsPage() {
             className={rangeDays === r.days ? 'active' : ''}
             onClick={() => setRangeDays(r.days)}
           >
-            {r.label}
+            {t(r.labelKey, { n: r.n })}
           </button>
         ))}
       </div>
 
       <FrequencyChart
-        title="Diaper changes / day"
+        title={t('chartsPage.diaper.title')}
         data={diaperData}
         series={[
-          { key: 'wet', label: 'Wet', color: DIAPER_SUBTYPE_COLORS.wet },
-          { key: 'dirty', label: 'Dirty', color: DIAPER_SUBTYPE_COLORS.dirty },
+          { key: 'wet', label: t('chartsPage.diaper.wet'), color: DIAPER_SUBTYPE_COLORS.wet },
+          { key: 'dirty', label: t('chartsPage.diaper.dirty'), color: DIAPER_SUBTYPE_COLORS.dirty },
         ]}
       />
       <FrequencyChart
-        title="Bottle volume / day"
-        unitLabel="mL"
+        title={t('chartsPage.bottle.title')}
+        unitLabel={t('chartsPage.unit.ml')}
         data={bottleData}
-        series={[{ key: 'volumeMl', label: 'Volume', color: EVENT_COLORS.bottle }]}
+        series={[{ key: 'volumeMl', label: t('chartsPage.bottle.series'), color: EVENT_COLORS.bottle }]}
       />
       <FrequencyChart
-        title="Breastfeeding minutes / day"
-        unitLabel="min"
+        title={t('chartsPage.breastfeeding.title')}
+        unitLabel={t('chartsPage.unit.min')}
         data={breastfeedingData}
-        series={[{ key: 'minutes', label: 'Minutes', color: EVENT_COLORS.breastfeeding }]}
+        series={[{ key: 'minutes', label: t('chartsPage.breastfeeding.series'), color: EVENT_COLORS.breastfeeding }]}
       />
       <FeedInsightsCard events={events} />
       <FrequencyChart
-        title="Sleep hours / day"
-        unitLabel="hrs"
+        title={t('chartsPage.sleep.title')}
+        unitLabel={t('chartsPage.unit.hours')}
         data={sleepData}
-        series={[{ key: 'hours', label: 'Hours', color: EVENT_COLORS.sleep }]}
+        series={[{ key: 'hours', label: t('chartsPage.sleep.series'), color: EVENT_COLORS.sleep }]}
       />
 
       <SleepSection events={events} child={child} />
 
-      <h2 className="section-title">WHO growth percentiles</h2>
+      <h2 className="section-title">{t('chartsPage.who.title')}</h2>
       {!child ? (
         <div className="empty-state">
-          Set up your child's profile on the Growth page to see percentile charts.
+          {t('chartsPage.who.noChild')}
         </div>
       ) : (
         <>
           <GrowthPercentileChart
-            title="Weight-for-age"
-            unit="kg"
+            title={t('chartsPage.who.weight')}
+            unit={t('chartsPage.unit.kg')}
             indicator="weight"
             sex={child.sex}
             childPoints={growthPoints.weight}
           />
           <GrowthPercentileChart
-            title="Length/height-for-age"
-            unit="cm"
+            title={t('chartsPage.who.height')}
+            unit={t('chartsPage.unit.cm')}
             indicator="height"
             sex={child.sex}
             childPoints={growthPoints.height}
           />
           <GrowthPercentileChart
-            title="Head circumference-for-age"
-            unit="cm"
+            title={t('chartsPage.who.head')}
+            unit={t('chartsPage.unit.cm')}
             indicator="headCircumference"
             sex={child.sex}
             childPoints={growthPoints.headCircumference}

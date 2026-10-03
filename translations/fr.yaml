@@ -1,0 +1,98 @@
+configuration:
+  parent1_username:
+    name: Identifiant du parent 1
+    description: Identifiant de connexion du premier parent (premier foyer).
+  parent1_password:
+    name: Mot de passe du parent 1
+    description: Mot de passe du premier parent.
+  parent1_display_name:
+    name: Nom affiché du parent 1
+    description: Nom affiché dans l'application pour le premier parent.
+  parent2_username:
+    name: Identifiant du parent 2
+    description: Identifiant de connexion du second parent (premier foyer).
+  parent2_password:
+    name: Mot de passe du parent 2
+    description: Mot de passe du second parent.
+  parent2_display_name:
+    name: Nom affiché du parent 2
+    description: Nom affiché dans l'application pour le second parent.
+  session_secret:
+    name: Secret de session
+    description: Longue chaîne aléatoire servant à signer les sessions de connexion.
+  mom_parent:
+    name: Maman (premier foyer)
+    description: Quel parent est Maman, 1 ou 2. Nécessaire pour les rappels de médicaments de Maman par email.
+  household2_slug:
+    name: Nom du second foyer
+    description: Identifiant court d'un second foyer facultatif (option historique ; préférez la liste des foyers).
+  household2_parent1_username:
+    name: Second foyer, identifiant du parent 1
+    description: Identifiant de connexion du parent 1 du second foyer.
+  household2_parent1_password:
+    name: Second foyer, mot de passe du parent 1
+    description: Mot de passe du parent 1 du second foyer.
+  household2_parent1_display_name:
+    name: Second foyer, nom affiché du parent 1
+    description: Nom affiché dans l'application pour le parent 1 du second foyer.
+  household2_parent2_username:
+    name: Second foyer, identifiant du parent 2
+    description: Identifiant de connexion du parent 2 du second foyer.
+  household2_parent2_password:
+    name: Second foyer, mot de passe du parent 2
+    description: Mot de passe du parent 2 du second foyer.
+  household2_parent2_display_name:
+    name: Second foyer, nom affiché du parent 2
+    description: Nom affiché dans l'application pour le parent 2 du second foyer.
+  household2_mom_parent:
+    name: Maman (second foyer)
+    description: Quel parent est Maman dans le second foyer, 1 ou 2.
+  households:
+    name: Foyers
+    description: Foyers supplémentaires, chacun avec ses propres données privées.
+    fields:
+      slug:
+        name: Nom du foyer
+        description: Identifiant court du foyer (lettres, chiffres, tirets).
+      parent1_username:
+        name: Identifiant du parent 1
+        description: Identifiant de connexion du premier parent.
+      parent1_password:
+        name: Mot de passe du parent 1
+        description: Mot de passe du premier parent.
+      parent1_display_name:
+        name: Nom affiché du parent 1
+        description: Nom affiché dans l'application pour le premier parent.
+      parent2_username:
+        name: Identifiant du parent 2
+        description: Identifiant de connexion du second parent (facultatif).
+      parent2_password:
+        name: Mot de passe du parent 2
+        description: Mot de passe du second parent.
+      parent2_display_name:
+        name: Nom affiché du parent 2
+        description: Nom affiché dans l'application pour le second parent.
+      mom_parent:
+        name: Maman
+        description: Quel parent est Maman, 1 ou 2. Nécessaire pour les rappels de médicaments de Maman par email.
+  smtp_host:
+    name: Serveur SMTP
+    description: Serveur de messagerie utilisé pour envoyer les rappels par email. Laissez vide pour désactiver les rappels.
+  smtp_port:
+    name: Port SMTP
+    description: Port du serveur de messagerie (465 pour TLS implicite).
+  smtp_user:
+    name: Identifiant SMTP
+    description: Identifiant de connexion au serveur de messagerie.
+  smtp_password:
+    name: Mot de passe SMTP
+    description: Mot de passe du serveur de messagerie.
+  smtp_from:
+    name: Adresse d'expédition
+    description: Adresse depuis laquelle les rappels par email sont envoyés.
+  public_url:
+    name: URL publique
+    description: Adresse de l'application (par exemple https://baby.exemple.fr), utilisée pour le lien dans les emails.
+  admin_email:
+    name: Email de l'administrateur
+    description: Destinataire des demandes des foyers (par exemple pour configurer Maman).

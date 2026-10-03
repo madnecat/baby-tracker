@@ -2,19 +2,23 @@
 // observations a parent can attach to it. Nothing here is a score — tags describe what happened,
 // and the numbers derived from them are only ever shown as plain medians and counts.
 
-export const FEED_TAGS = [
-  { key: 'searching', label: 'Playing / searching' },
-  { key: 'efficient', label: 'Efficient feed' },
-  { key: 'dozed', label: 'Fell asleep' },
-  { key: 'hard_latch', label: 'Hard to latch' },
-];
+import { t } from '../i18n/index.js';
 
-export const AFTER_FEED = [
-  { key: 'satisfied', label: 'Seemed full' },
-  { key: 'still_hungry', label: 'Still hungry' },
-];
+// `key` is the stored value; `labelKey` the catalog key. `label` is a lazy getter (resolved when
+// read, never at import) kept so unmigrated callers work; prefer t(item.labelKey).
+const choice = (prefix) => (key) => ({
+  key,
+  labelKey: `${prefix}.${key}`,
+  get label() {
+    return t(this.labelKey);
+  },
+});
 
-const SIDE_LABEL = { left: 'Left', right: 'Right' };
+export const FEED_TAGS = ['searching', 'efficient', 'dozed', 'hard_latch'].map(choice('feed.tag'));
+
+export const AFTER_FEED = ['satisfied', 'still_hungry'].map(choice('feed.after'));
+
+const SIDE_LABEL_KEY = { left: 'side.left', right: 'side.right' };
 const OTHER = { left: 'right', right: 'left' };
 
 /** Only 'left' / 'right' are valid starting sides; anything else (or missing) is unknown. */
@@ -51,10 +55,12 @@ export function suggestNextSide(lastFeed, now = Date.now()) {
 /** "Left", "Right", "Left, then Right", or "Both sides" when the order wasn't recorded. */
 export function describeSides(details) {
   const side = details?.side;
-  if (side === 'left' || side === 'right') return SIDE_LABEL[side];
+  if (side === 'left' || side === 'right') return t(SIDE_LABEL_KEY[side]);
   if (side === 'both') {
     const first = firstSideOf(details);
-    return first ? `${SIDE_LABEL[first]}, then ${SIDE_LABEL[OTHER[first]]}` : 'Both sides';
+    return first
+      ? t('feed.sidesThen', { first: t(SIDE_LABEL_KEY[first]), second: t(SIDE_LABEL_KEY[OTHER[first]]) })
+      : t('feed.bothSides');
   }
   return '?';
 }
@@ -77,11 +83,12 @@ export function lastFinishedFeed(events, now = Date.now()) {
 
 export function tagLabels(details) {
   const tags = Array.isArray(details?.tags) ? details.tags : [];
-  return FEED_TAGS.filter((t) => tags.includes(t.key)).map((t) => t.label);
+  return FEED_TAGS.filter((tag) => tags.includes(tag.key)).map((tag) => t(tag.labelKey));
 }
 
 export function afterFeedLabel(details) {
-  return AFTER_FEED.find((a) => a.key === details?.afterFeed)?.label ?? null;
+  const found = AFTER_FEED.find((a) => a.key === details?.afterFeed);
+  return found ? t(found.labelKey) : null;
 }
 
 /** One-line description of the observations on a feed, or null if it has none. */

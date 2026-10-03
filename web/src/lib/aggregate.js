@@ -1,4 +1,5 @@
 import { eachDayOfInterval, format, startOfDay, subDays } from 'date-fns';
+import { formatDayShort } from './dateUtils.js';
 
 /**
  * Buckets events into one row per calendar day across `days` back from today
@@ -19,7 +20,7 @@ export function aggregateByDay(events, days, initial, reducer) {
   }
 
   return [...buckets.entries()].map(([day, value]) => ({
-    day: format(new Date(day), 'd MMM'),
+    day: formatDayShort(day),
     ...value,
   }));
 }

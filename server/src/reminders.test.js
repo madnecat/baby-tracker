@@ -39,7 +39,8 @@ function addDose(db, { name = 'Ibuprofen', who, dueInMin, intervalHours = 6, sta
 }
 
 function enable(db, userId, { email = `u${userId}@example.com`, language = 'en', at = NOW - minutes(600) } = {}) {
-  savePrefs(db, userId, { enabled: true, email, language }, new Date(at));
+  savePrefs(db, userId, { enabled: true, email }, new Date(at));
+  db.prepare(`UPDATE users SET language = ? WHERE id = ?`).run(language, userId); // the recipient's app language
 }
 
 function setMom(db, userId) {
@@ -52,7 +53,8 @@ test('fresh and migrated databases both end up at the latest schema', () => {
   const db = makeDb();
   const cols = db.prepare(`PRAGMA table_info(settings)`).all().map((c) => c.name);
   assert.ok(cols.includes('mom_user_id') && cols.includes('hide_baby_medication'));
-  assert.equal(db.pragma('user_version', { simple: true }), 5);
+  assert.equal(db.pragma('user_version', { simple: true }), 6);
+  assert.ok(db.prepare(`PRAGMA table_info(users)`).all().some((c) => c.name === 'language'));
 });
 
 test('nothing is sent while nobody has enabled reminders', () => {
@@ -229,13 +231,12 @@ test('preferences: validation, enabling stamps enabled_at, clearing the address 
   const db = makeDb();
   assert.throws(() => savePrefs(db, 1, { enabled: true, email: 'nope' }), PrefsError);
   assert.throws(() => savePrefs(db, 1, { email: 'a@b.co\r\nBcc: x@y.z' }), PrefsError);
-  assert.throws(() => savePrefs(db, 1, { language: 'de' }), PrefsError);
   assert.throws(() => savePrefs(db, 1, { enabled: true }), /email address first/);
 
   const at = new Date('2026-10-03T10:00:00.000Z');
-  savePrefs(db, 1, { enabled: true, email: 'mum@example.com', language: 'fr' }, at);
-  assert.deepEqual(getPrefs(db, 1), { email: 'mum@example.com', enabled: true, language: 'fr' });
-  savePrefs(db, 1, { language: 'en' }, new Date('2026-10-03T11:00:00.000Z')); // unrelated change
+  savePrefs(db, 1, { enabled: true, email: 'mum@example.com' }, at);
+  assert.deepEqual(getPrefs(db, 1), { email: 'mum@example.com', enabled: true });
+  savePrefs(db, 1, { email: 'mum2@example.com' }, new Date('2026-10-03T11:00:00.000Z')); // unrelated change
   assert.equal(
     db.prepare(`SELECT enabled_at FROM notification_prefs WHERE user_id = 1`).get().enabled_at,
     at.toISOString(),
@@ -303,7 +304,7 @@ test('migration v5 upgrades a real v4 database without touching its settings', (
 
   runMigrations(db);
 
-  assert.equal(db.pragma('user_version', { simple: true }), 5);
+  assert.equal(db.pragma('user_version', { simple: true }), 6);
   const row = db.prepare(`SELECT * FROM settings WHERE id = 1`).get();
   assert.equal(row.feed_prompt, 1, 'existing rows get the default (on)');
   assert.equal(row.hide_contractions, 1);

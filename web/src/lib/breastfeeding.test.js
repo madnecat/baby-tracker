@@ -1,3 +1,4 @@
+import { withLocale } from '../i18n/testSetup.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -68,6 +69,23 @@ test('observationsText joins tags and the after-feed answer', () => {
     observationsText({ tags: ['efficient', 'dozed'], afterFeed: 'satisfied' }),
     'Efficient feed · Fell asleep · Seemed full'
   );
+});
+
+test('French sides and observations', () => {
+  withLocale('fr', () => {
+    assert.equal(describeSides({ side: 'left' }), 'Gauche');
+    assert.equal(describeSides({ side: 'both', firstSide: 'right' }), 'Droite, puis Gauche');
+    assert.equal(describeSides({ side: 'both' }), 'Les deux côtés');
+    assert.equal(
+      observationsText({ tags: ['efficient'], afterFeed: 'still_hungry' }),
+      'Tétée efficace · Avait encore faim'
+    );
+  });
+});
+
+test('unknown stored values are ignored or shown as a placeholder, not crashed on', () => {
+  assert.equal(describeSides({ side: 'weird' }), '?');
+  assert.equal(observationsText({ tags: ['nope'], afterFeed: 'nope' }), null);
 });
 
 test('insights need enough observed feeds, then report plain medians', () => {

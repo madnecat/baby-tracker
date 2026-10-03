@@ -1,3 +1,4 @@
+// `title` is already-translated text from the caller.
 export function Sheet({ title, onClose, children }) {
   return (
     <div className="sheet-backdrop" onClick={onClose}>

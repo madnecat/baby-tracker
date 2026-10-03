@@ -1,0 +1,98 @@
+configuration:
+  parent1_username:
+    name: Parent 1 username
+    description: Login name of the first parent (first household).
+  parent1_password:
+    name: Parent 1 password
+    description: Password of the first parent.
+  parent1_display_name:
+    name: Parent 1 display name
+    description: Name shown in the app for the first parent.
+  parent2_username:
+    name: Parent 2 username
+    description: Login name of the second parent (first household).
+  parent2_password:
+    name: Parent 2 password
+    description: Password of the second parent.
+  parent2_display_name:
+    name: Parent 2 display name
+    description: Name shown in the app for the second parent.
+  session_secret:
+    name: Session secret
+    description: Long random secret used to sign login sessions.
+  mom_parent:
+    name: Mum (first household)
+    description: Which parent is Mum, 1 or 2. Needed for Mum's medication email reminders.
+  household2_slug:
+    name: Second household name
+    description: Short identifier of an optional second household (legacy option; prefer the households list).
+  household2_parent1_username:
+    name: Second household, parent 1 username
+    description: Login name of parent 1 in the second household.
+  household2_parent1_password:
+    name: Second household, parent 1 password
+    description: Password of parent 1 in the second household.
+  household2_parent1_display_name:
+    name: Second household, parent 1 display name
+    description: Name shown in the app for parent 1 in the second household.
+  household2_parent2_username:
+    name: Second household, parent 2 username
+    description: Login name of parent 2 in the second household.
+  household2_parent2_password:
+    name: Second household, parent 2 password
+    description: Password of parent 2 in the second household.
+  household2_parent2_display_name:
+    name: Second household, parent 2 display name
+    description: Name shown in the app for parent 2 in the second household.
+  household2_mom_parent:
+    name: Mum (second household)
+    description: Which parent is Mum in the second household, 1 or 2.
+  households:
+    name: Households
+    description: Additional households, each with its own private data.
+    fields:
+      slug:
+        name: Household name
+        description: Short identifier of the household (letters, digits, dashes).
+      parent1_username:
+        name: Parent 1 username
+        description: Login name of the first parent.
+      parent1_password:
+        name: Parent 1 password
+        description: Password of the first parent.
+      parent1_display_name:
+        name: Parent 1 display name
+        description: Name shown in the app for the first parent.
+      parent2_username:
+        name: Parent 2 username
+        description: Login name of the second parent (optional).
+      parent2_password:
+        name: Parent 2 password
+        description: Password of the second parent.
+      parent2_display_name:
+        name: Parent 2 display name
+        description: Name shown in the app for the second parent.
+      mom_parent:
+        name: Mum
+        description: Which parent is Mum, 1 or 2. Needed for Mum's medication email reminders.
+  smtp_host:
+    name: SMTP server
+    description: Mail server used to send reminder emails. Leave empty to turn email reminders off.
+  smtp_port:
+    name: SMTP port
+    description: Port of the mail server (465 for implicit TLS).
+  smtp_user:
+    name: SMTP username
+    description: Login for the mail server.
+  smtp_password:
+    name: SMTP password
+    description: Password for the mail server.
+  smtp_from:
+    name: Sender address
+    description: Address the reminder emails are sent from.
+  public_url:
+    name: Public URL
+    description: Address of the app (for example https://baby.example.com), used for the link in emails.
+  admin_email:
+    name: Administrator email
+    description: Where households' requests (for example to set up Mum) are sent.

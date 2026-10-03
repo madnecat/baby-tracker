@@ -45,8 +45,9 @@ export function dueTimeMs(startedAt, intervalHours) {
 export function collectDueReminders(db, nowMs) {
   const prefs = db
     .prepare(
-      `SELECT user_id AS userId, email, language, enabled_at AS enabledAt
-       FROM notification_prefs WHERE enabled = 1 AND email <> ''`
+      `SELECT p.user_id AS userId, p.email, u.language, p.enabled_at AS enabledAt
+       FROM notification_prefs p JOIN users u ON u.id = p.user_id
+       WHERE p.enabled = 1 AND p.email <> ''`
     )
     .all();
   if (prefs.length === 0) return [];

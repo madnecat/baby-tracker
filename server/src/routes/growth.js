@@ -6,6 +6,7 @@ import {
   listGrowthMeasurements,
   updateGrowthMeasurement,
 } from '../growthService.js';
+import { sendServiceError } from './errorCodes.js';
 
 export const growthRouter = Router();
 growthRouter.use(requireAuth);
@@ -19,7 +20,7 @@ growthRouter.post('/', (req, res) => {
     const entry = createGrowthMeasurement(req.db, { ...req.body, createdBy: req.user.id });
     res.status(201).json(entry);
   } catch (e) {
-    res.status(400).json({ error: e.message });
+    sendServiceError(res, 400, e);
   }
 });
 
@@ -27,7 +28,7 @@ growthRouter.patch('/:id', (req, res) => {
   try {
     res.json(updateGrowthMeasurement(req.db, req.params.id, req.body || {}));
   } catch (e) {
-    res.status(404).json({ error: e.message });
+    sendServiceError(res, 404, e);
   }
 });
 

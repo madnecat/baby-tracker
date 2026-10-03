@@ -8,7 +8,7 @@ const WHO = {
 
 function link(language, publicUrl) {
   if (!publicUrl) return '';
-  return language === 'fr' ? `\nOuvrir Baby Tracker : ${publicUrl}\n` : `\nOpen Baby Tracker: ${publicUrl}\n`;
+  return language === 'fr' ? `\nOuvrir Baby Tracker\u00A0: ${publicUrl}\n` : `\nOpen Baby Tracker: ${publicUrl}\n`;
 }
 
 export function normaliseLanguage(language) {
@@ -21,12 +21,12 @@ export function reminderEmail({ who, language, publicUrl }) {
   const subject = WHO[lang][who === 'baby' ? 'baby' : 'mom'];
   if (lang === 'fr') {
     return {
-      subject: `Baby Tracker : une prise pour ${subject} est de nouveau possible`,
+      subject: `Baby Tracker\u00A0: une prise pour ${subject} est de nouveau possible`,
       text:
-        `Le délai entre deux prises est écoulé : une prise de médicament pour ${subject} est de nouveau possible.\n` +
+        `Le délai entre deux prises est écoulé\u00A0: une prise de médicament pour ${subject} est de nouveau possible.\n` +
         link(lang, publicUrl) +
         `\nVérifiez toujours dans l'application et sur la notice avant de donner une dose.\n` +
-        `Vous pouvez désactiver ces emails dans Réglages (Settings) > Email reminders.\n`,
+        `Vous pouvez désactiver ces emails dans Paramètres > Rappels par email.\n`,
     };
   }
   return {
@@ -43,8 +43,8 @@ export function testEmail({ language, publicUrl }) {
   const lang = normaliseLanguage(language);
   if (lang === 'fr') {
     return {
-      subject: 'Baby Tracker : email de test',
-      text: `Ceci est un email de test : les rappels par email fonctionnent.\n${link(lang, publicUrl)}`,
+      subject: 'Baby Tracker\u00A0: email de test',
+      text: `Ceci est un email de test\u00A0: les rappels par email fonctionnent.\n${link(lang, publicUrl)}`,
     };
   }
   return {
@@ -53,7 +53,11 @@ export function testEmail({ language, publicUrl }) {
   };
 }
 
-/** Sent to the add-on administrator when a household asks for Mum to be set up. */
+/**
+ * Sent to the add-on administrator when a household asks for Mum to be set up. Always English:
+ * the administrator is the add-on owner (not one of the parents), so the requesting parent's
+ * language does not apply.
+ */
 export function adminMomRequestEmail({ householdSlug, requestedBy }) {
   return {
     subject: `Baby Tracker: household "${householdSlug}" needs Mum to be set up`,

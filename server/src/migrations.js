@@ -90,6 +90,16 @@ const MIGRATIONS = [
     },
     log: 'Added settings.feed_prompt',
   },
+  {
+    version: 6,
+    run: (db) => {
+      const columns = db.prepare(`PRAGMA table_info(users)`).all();
+      if (!columns.some((c) => c.name === 'language')) {
+        db.exec(`ALTER TABLE users ADD COLUMN language TEXT CHECK (language IN ('en','fr'))`);
+      }
+    },
+    log: 'Added users.language',
+  },
 ];
 
 export function runMigrations(db) {

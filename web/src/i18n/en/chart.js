@@ -1,0 +1,36 @@
+// Charts and the breastfeeding-notes card.
+export default {
+  'chart.contractions.title': 'Contractions',
+  'chart.contractions.empty': 'No contractions in the last {range}.',
+  'chart.contractions.summaryLine': 'Last {range} — {summary}',
+  'chart.contractions.count_one': '{count} contraction',
+  'chart.contractions.count_other': '{count} contractions',
+  'chart.contractions.every': 'every ~{duration}',
+  'chart.contractions.each': '~{duration} each',
+  'chart.contractions.hint': 'Like a contraction monitor trace: width of each plateau = duration, height = intensity, flat stretches = gap between contractions.',
+
+  'chart.intensity.mild': 'mild',
+  'chart.intensity.moderate': 'moderate',
+  'chart.intensity.strong': 'strong',
+  'chart.intensity.unspecified': 'unspecified',
+
+  'chart.growth.ageMonths': 'Age (months)',
+  'chart.growth.monthsShort': '{v} mo',
+  'chart.growth.yourBaby': 'Your baby',
+
+  'chart.feedInsights.title_one': 'Breastfeeding notes · last day',
+  'chart.feedInsights.title_other': 'Breastfeeding notes · last {count} days',
+  'chart.feedInsights.feeds_one': '{count} feed',
+  'chart.feedInsights.feeds_other': '{count} feeds',
+  'chart.feedInsights.summary': '{feeds}, {observed} with notes',
+  'chart.feedInsights.pct': '{n}%',
+  'chart.feedInsights.ariaItem': '{label}: {feeds}',
+  'chart.feedInsights.segment': '{label}: {feeds} ({pct})',
+  'chart.feedInsights.row': '{count} · {pct}',
+  'chart.feedInsights.rowTypical': 'typically {duration} · {count} · {pct}',
+  'chart.feedInsights.fullLabel': 'Seemed full afterwards',
+  'chart.feedInsights.fullRatio': '{satisfied} of {answered} · {pct}',
+  'chart.feedInsights.fullAria_one': 'Seemed full after {satisfied} of {answered} feed',
+  'chart.feedInsights.fullAria_other': 'Seemed full after {satisfied} of {answered} feeds',
+  'chart.feedInsights.disclaimer': 'From your own notes (typical = median length). Not a medical assessment — talk to your midwife or health visitor if you are worried about feeding.',
+};

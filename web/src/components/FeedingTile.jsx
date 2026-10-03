@@ -3,15 +3,16 @@ import { EventTile } from './EventTile.jsx';
 import { Sheet } from './Sheet.jsx';
 import { BottleSheet } from './BottleSheet.jsx';
 import { FeedQualitySheet } from './FeedQualitySheet.jsx';
-import { api } from '../api/client.js';
+import { api, errorMessage } from '../api/client.js';
+import { t } from '../i18n/index.js';
 import { EVENT_COLORS } from '../lib/palette.js';
-import { formatDuration } from '../lib/dateUtils.js';
+import { formatAgo, formatDuration } from '../lib/dateUtils.js';
 import { describeSides, lastFinishedFeed, suggestNextSide } from '../lib/breastfeeding.js';
 
 const SIDE_CHOICES = [
-  { key: 'left', label: 'Left' },
-  { key: 'right', label: 'Right' },
-  { key: 'both', label: 'Both' },
+  { key: 'left', labelKey: 'side.left' },
+  { key: 'right', labelKey: 'side.right' },
+  { key: 'both', labelKey: 'side.both' },
 ];
 const FIRST_SIDE_CHOICES = SIDE_CHOICES.filter((c) => c.key !== 'both');
 // Only the last week is fetched: older feeds can't produce a suggestion anyway.
@@ -75,7 +76,7 @@ export function FeedingTile({ onChange }) {
       setPickingFirstSide(false);
       onChange?.();
     } catch (e) {
-      setError(e.message);
+      setError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -90,7 +91,7 @@ export function FeedingTile({ onChange }) {
       if (askQuality) setJustStopped(stopped);
     } catch (e) {
       // The feed is still running; the tile keeps showing Stop so it can be tried again.
-      setError(`Could not stop the feed: ${e.message}`);
+      setError(t('tiles.feeding.stopFailedError', { error: errorMessage(e) }));
       setStopFailed(true);
     } finally {
       setBusy(false);
@@ -98,7 +99,8 @@ export function FeedingTile({ onChange }) {
   }
 
   const suggested = suggestNextSide(lastFeed);
-  const suggestedLabel = (key) => (suggested === key ? ' · suggested' : '');
+  const choiceLabel = (c) =>
+    suggested === c.key ? t('tiles.feeding.suggestedChoice', { label: t(c.labelKey) }) : t(c.labelKey);
 
   // While a feed is running, "Left, then Right" would be wrong (it hasn't switched yet), so a
   // "both" feed reads "Both (Left first)" until it is finished.
@@ -106,17 +108,22 @@ export function FeedingTile({ onChange }) {
   const activeFirst = active?.details?.firstSide;
   const sideText =
     activeSide === 'both' && activeFirst
-      ? `Both (${activeFirst === 'left' ? 'Left' : 'Right'} first)`
+      ? t('tiles.feeding.bothFirst', { side: t(activeFirst === 'left' ? 'side.left' : 'side.right') })
       : activeSide
         ? describeSides(active.details)
         : null;
-  const sub = active ? `${sideText ? `${sideText} · ` : ''}${formatDuration(active.startedAt)}` : undefined;
+  const duration = active ? formatDuration(active.startedAt) : '';
+  const sub = active
+    ? sideText
+      ? t('tiles.subWithDuration', { detail: sideText, duration })
+      : duration
+    : undefined;
 
   return (
     <>
       <EventTile
         icon={active ? '⏹' : '🍽️'}
-        label={active ? 'Breastfeeding — Stop' : 'Feeding'}
+        label={active ? t('tiles.feeding.stopLabel') : t('tiles.feeding.label')}
         sub={sub}
         color={EVENT_COLORS.breastfeeding}
         running={!!active}
@@ -129,7 +136,7 @@ export function FeedingTile({ onChange }) {
 
       {stopFailed && (
         <Sheet
-          title="Couldn't stop the feed"
+          title={t('tiles.feeding.stopFailedTitle')}
           onClose={() => {
             setStopFailed(false);
             setError(null);
@@ -145,13 +152,13 @@ export function FeedingTile({ onChange }) {
               setError(null);
             }}
           >
-            OK — I'll try again
+            {t('tiles.feeding.tryAgain')}
           </button>
         </Sheet>
       )}
 
       {choosing && (
-        <Sheet title="Log a feed" onClose={() => setChoosing(false)}>
+        <Sheet title={t('tiles.feeding.logTitle')} onClose={() => setChoosing(false)}>
           <div className="choice-row">
             <button
               type="button"
@@ -161,7 +168,7 @@ export function FeedingTile({ onChange }) {
                 openSidePicker();
               }}
             >
-              🤱 Breastfeeding
+              {t('tiles.feeding.breastfeeding')}
             </button>
             <button
               type="button"
@@ -171,18 +178,26 @@ export function FeedingTile({ onChange }) {
                 setLoggingBottle(true);
               }}
             >
-              🍼 Bottle
+              {t('tiles.feeding.bottle')}
             </button>
           </div>
         </Sheet>
       )}
 
       {pickingSide && (
-        <Sheet title="Which side?" onClose={() => setPickingSide(false)}>
+        <Sheet title={t('tiles.feeding.whichSide')} onClose={() => setPickingSide(false)}>
           {lastFeed && (
             <p style={{ marginTop: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              Last feed: {describeSides(lastFeed.details)} · {formatDuration(lastFeed.endedAt)} ago
-              {suggested ? ` — suggested next: ${suggested === 'left' ? 'Left' : 'Right'}` : ''}
+              {suggested
+                ? t('tiles.feeding.lastFeedSuggested', {
+                    sides: describeSides(lastFeed.details),
+                    ago: formatAgo(lastFeed.endedAt),
+                    side: t(suggested === 'left' ? 'side.left' : 'side.right'),
+                  })
+                : t('tiles.feeding.lastFeed', {
+                    sides: describeSides(lastFeed.details),
+                    ago: formatAgo(lastFeed.endedAt),
+                  })}
             </p>
           )}
           <div className="choice-row">
@@ -201,8 +216,7 @@ export function FeedingTile({ onChange }) {
                   }
                 }}
               >
-                {c.label}
-                {suggestedLabel(c.key)}
+                {choiceLabel(c)}
               </button>
             ))}
           </div>
@@ -211,7 +225,7 @@ export function FeedingTile({ onChange }) {
       )}
 
       {pickingFirstSide && (
-        <Sheet title="Which side first?" onClose={() => setPickingFirstSide(false)}>
+        <Sheet title={t('tiles.feeding.whichSideFirst')} onClose={() => setPickingFirstSide(false)}>
           <div className="choice-row">
             {FIRST_SIDE_CHOICES.map((c) => (
               <button
@@ -221,8 +235,7 @@ export function FeedingTile({ onChange }) {
                 disabled={busy}
                 onClick={() => startBreastfeeding('both', c.key)}
               >
-                {c.label}
-                {suggestedLabel(c.key)}
+                {choiceLabel(c)}
               </button>
             ))}
           </div>
@@ -233,7 +246,7 @@ export function FeedingTile({ onChange }) {
             disabled={busy}
             onClick={() => startBreastfeeding('both')}
           >
-            Not sure — skip
+            {t('tiles.feeding.notSure')}
           </button>
           {error && <p className="error-text">{error}</p>}
         </Sheet>

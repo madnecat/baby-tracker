@@ -1,18 +1,30 @@
 import { useState } from 'react';
 import { Sheet } from './Sheet.jsx';
-import { api } from '../api/client.js';
+import { api, errorMessage } from '../api/client.js';
+import { t } from '../i18n/index.js';
+import { medicationDisplayName, presetWarning } from '../lib/medications.js';
+import { readNumberField } from '../lib/numberField.js';
 
 export function MedicationSheet({ preset, who = 'mom', onClose, onSaved }) {
+  // `name` is stored as-is (a preset's English name is its identifier); only the title is translated.
   const [name, setName] = useState(preset?.name || '');
-  const [doseAmount, setDoseAmount] = useState(preset?.doseAmount ?? '');
+  // Dose and interval hold the raw text typed; they are parsed on submit.
+  const [doseAmount, setDoseAmount] = useState(String(preset?.doseAmount ?? ''));
   const [doseUnit, setDoseUnit] = useState(preset?.doseUnit || 'mg');
-  const [intervalHours, setIntervalHours] = useState(preset?.intervalHours ?? 6);
+  const [intervalHours, setIntervalHours] = useState(String(preset?.intervalHours ?? 6));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const warning = presetWarning(preset);
 
   async function submit() {
     if (!name.trim()) {
-      setError('Medication name is required');
+      setError(t('sheets.medication.nameRequired'));
+      return;
+    }
+    const dose = readNumberField(doseAmount, { min: 0 });
+    const interval = readNumberField(intervalHours, { required: true, min: 0 });
+    if (dose.invalid || interval.invalid) {
+      setError(t('sheets.invalidNumber'));
       return;
     }
     setSaving(true);
@@ -26,38 +38,45 @@ export function MedicationSheet({ preset, who = 'mom', onClose, onSaved }) {
         details: {
           name: name.trim(),
           who,
-          doseAmount: doseAmount === '' ? null : Number(doseAmount),
+          doseAmount: dose.value,
           doseUnit: doseUnit || null,
-          intervalHours: Number(intervalHours),
+          intervalHours: interval.value,
         },
       });
       onSaved();
     } catch (e) {
-      setError(e.message);
+      setError(errorMessage(e));
       setSaving(false);
     }
   }
 
   return (
-    <Sheet title={preset ? `Log ${preset.name}` : 'Log medication'} onClose={onClose}>
+    <Sheet
+      title={
+        preset
+          ? t('sheets.medication.titlePreset', { name: medicationDisplayName(preset.name) })
+          : t('sheets.medication.titleCustom')
+      }
+      onClose={onClose}
+    >
       {!preset && (
         <div className="field">
-          <label htmlFor="medname">Medication name</label>
+          <label htmlFor="medname">{t('sheets.medication.name')}</label>
           <input id="medname" value={name} onChange={(e) => setName(e.target.value)} required />
         </div>
       )}
-      {preset?.warning && (
+      {warning && (
         <div className="warning-banner">
-          ⚠️ <span>{preset.warning}</span>
+          ⚠️ <span>{warning}</span>
         </div>
       )}
       <div className="field">
-        <label htmlFor="dose">Dose</label>
+        <label htmlFor="dose">{t('sheets.medication.dose')}</label>
         <div style={{ display: 'flex', gap: 8 }}>
           <input
             id="dose"
-            type="number"
-            step="any"
+            type="text"
+            inputMode="decimal"
             value={doseAmount}
             onChange={(e) => setDoseAmount(e.target.value)}
             style={{ flex: 2 }}
@@ -65,25 +84,24 @@ export function MedicationSheet({ preset, who = 'mom', onClose, onSaved }) {
           <input
             value={doseUnit}
             onChange={(e) => setDoseUnit(e.target.value)}
-            placeholder="mg / g / mL"
+            placeholder={t('sheets.medication.unitPlaceholder')}
             style={{ flex: 1 }}
           />
         </div>
       </div>
       <div className="field">
-        <label htmlFor="interval">Minimum hours until next dose</label>
+        <label htmlFor="interval">{t('sheets.medication.interval')}</label>
         <input
           id="interval"
-          type="number"
-          step="0.5"
-          min="0"
+          type="text"
+          inputMode="decimal"
           value={intervalHours}
           onChange={(e) => setIntervalHours(e.target.value)}
         />
       </div>
       {error && <p className="error-text">{error}</p>}
       <button className="btn btn-primary btn-block" disabled={saving} onClick={submit}>
-        {saving ? 'Saving…' : 'Log dose taken now'}
+        {saving ? t('common.saving') : t('sheets.medication.submit')}
       </button>
     </Sheet>
   );

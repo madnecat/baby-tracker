@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { EventTile } from './EventTile.jsx';
 import { MedicationSheet } from './MedicationSheet.jsx';
 import { EVENT_COLORS } from '../lib/palette.js';
-import { getMedicationStatus, lastDoseFor } from '../lib/medications.js';
+import { getMedicationStatus, lastDoseFor, medicationDisplayName } from '../lib/medications.js';
 
 /** `medicationEvents`: pre-fetched list of type=medication events for `who` only, shared across all preset tiles by the parent (avoids one fetch per tile). */
 export function MedicationTile({ preset, who = 'mom', medicationEvents, onLogged }) {
@@ -26,7 +26,7 @@ export function MedicationTile({ preset, who = 'mom', medicationEvents, onLogged
     <>
       <EventTile
         icon={preset.warning ? '⚠️' : '💊'}
-        label={preset.name}
+        label={medicationDisplayName(preset.name)}
         sub={status.sub}
         color={EVENT_COLORS.medication}
         running={!status.safe}

@@ -19,7 +19,7 @@ apiTokensRouter.get('/', (req, res) => {
 apiTokensRouter.post('/', (req, res) => {
   const { label } = req.body || {};
   if (!label || !label.trim()) {
-    return res.status(400).json({ error: 'label is required' });
+    return res.status(400).json({ error: 'label is required', code: 'TOKEN_LABEL_REQUIRED' });
   }
   const { id, token } = createApiToken(req.db, req.user.id, label.trim());
   res.status(201).json({ id, token });

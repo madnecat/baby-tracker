@@ -18,8 +18,7 @@ export default {
 
   'language.title': 'Language',
   'language.label': 'App language',
-  'language.hint':
-    'Saved on this device only. Reminder emails use the language you have selected when you save your email reminders.',
+  'language.hint': 'Saved to your account, so it follows you on every device. Reminder emails use it too.',
   'language.en': 'English',
   'language.fr': 'Français',
 };
