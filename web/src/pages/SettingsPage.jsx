@@ -5,6 +5,7 @@ import { ApiTokensSection } from '../components/ApiTokensSection.jsx';
 import { ChildProfileSection } from '../components/ChildProfileSection.jsx';
 import { EmailRemindersSection } from '../components/EmailRemindersSection.jsx';
 import { FeedingSettingsSection } from '../components/FeedingSettingsSection.jsx';
+import { LanguageSection } from '../components/LanguageSection.jsx';
 
 export default function SettingsPage() {
   const { user, logout } = useAuth();
@@ -36,6 +37,8 @@ export default function SettingsPage() {
       <div className="card" style={{ marginBottom: 20 }}>
         Signed in as <strong>{user?.displayName}</strong>
       </div>
+
+      <LanguageSection />
 
       <ChildProfileSection />
 
