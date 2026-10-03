@@ -16,7 +16,8 @@ export function notificationsRouter(mailer) {
   router.use(requireAuth);
 
   const allowTest = createRateLimiter(3, 60 * 60 * 1000);
-  const allowAdminRequest = createRateLimiter(1, 24 * 60 * 60 * 1000);
+  // Recorded only after a successful send, so a transient SMTP failure doesn't lock a household out for a day.
+  const adminRequestedAt = new Map();
 
   router.get('/', (req, res) => {
     const momUserId = getMomUserId(req.db);
@@ -70,7 +71,7 @@ export function notificationsRouter(mailer) {
     if (getMomUserId(req.db) != null) {
       return res.status(409).json({ error: 'Mum is already set up for this household.' });
     }
-    if (!allowAdminRequest(req.householdSlug)) {
+    if (Date.now() - (adminRequestedAt.get(req.householdSlug) ?? 0) < 24 * 60 * 60 * 1000) {
       return res.status(429).json({ error: 'A request was already sent today.' });
     }
     try {
@@ -78,6 +79,7 @@ export function notificationsRouter(mailer) {
         to: mailer.config.adminEmail,
         ...adminMomRequestEmail({ householdSlug: req.householdSlug, requestedBy: req.user.displayName }),
       });
+      adminRequestedAt.set(req.householdSlug, Date.now());
       res.status(204).end();
     } catch (e) {
       console.error(`Admin request email failed (household ${req.householdSlug}): ${e?.code || 'send error'}`);

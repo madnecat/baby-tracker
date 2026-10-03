@@ -42,6 +42,9 @@ export function savePrefs(db, userId, patch, now = new Date()) {
   }
   const language = patch.language === undefined ? current.language : patch.language;
 
+  if (patch.enabled !== undefined && typeof patch.enabled !== 'boolean') {
+    throw new PrefsError('enabled must be true or false.');
+  }
   let enabled = patch.enabled === undefined ? current.enabled : patch.enabled === true;
   if (patch.enabled === true && email === '') throw new PrefsError('Enter an email address first.');
   if (email === '') enabled = false; // clearing the address turns reminders off

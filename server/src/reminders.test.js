@@ -248,3 +248,34 @@ test('rate limiter allows N per window', () => {
   const allow = createRateLimiter(2, 1000);
   assert.ok(allow('k', 0) && allow('k', 10) && !allow('k', 20) && allow('other', 20) && allow('k', 2000));
 });
+
+test('a delivered email whose record fails to save is not retried (no duplicate emails)', async () => {
+  const real = makeDb();
+  enable(real, 2);
+  addDose(real, { who: 'baby', dueInMin: -1 });
+  const db = new Proxy(real, {
+    get(target, prop) {
+      if (prop === 'prepare') {
+        return (sql) => {
+          if (/INSERT OR IGNORE INTO medication_reminders/.test(sql)) throw new Error('SQLITE_BUSY');
+          return target.prepare(sql);
+        };
+      }
+      const value = target[prop];
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+  });
+  const sent = [];
+  const mailer = { send: async (m) => sent.push(m) };
+  const retries = new Map();
+  const log = { log() {}, error() {} };
+  for (const t of [0, 61000, 5 * 60000, 10 * 60000]) {
+    await processHousehold({ slug: 'h', db, mailer, nowMs: NOW + t, retries, log });
+  }
+  assert.equal(sent.length, 1);
+});
+
+test('enabled must be a real boolean', () => {
+  const db = makeDb();
+  assert.throws(() => savePrefs(db, 1, { enabled: 'true', email: 'a@b.co' }), PrefsError);
+});

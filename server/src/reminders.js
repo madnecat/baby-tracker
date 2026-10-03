@@ -129,11 +129,6 @@ export async function processHousehold({ slug, db, mailer, publicUrl, nowMs, ret
           publicUrl,
         });
         await mailer.send({ to: recipient.email, subject, text });
-        db.prepare(
-          `INSERT OR IGNORE INTO medication_reminders (event_id, user_id, due_at, sent_at) VALUES (?, ?, ?, ?)`
-        ).run(reminder.eventId, recipient.userId, reminder.dueAt, new Date(nowMs).toISOString());
-        retries.delete(key);
-        log.log(`Reminder email sent (household ${slug}, user ${recipient.userId}, dose ${reminder.eventId})`);
       } catch (e) {
         // Never log the address or the server's message (it can echo the recipient).
         const attempts = (retry?.attempts ?? 0) + 1;
@@ -144,7 +139,22 @@ export async function processHousehold({ slug, db, mailer, publicUrl, nowMs, ret
         log.error(
           `Reminder email failed (household ${slug}, user ${recipient.userId}, dose ${reminder.eventId}, attempt ${attempts}): ${e?.code || 'send error'}`
         );
+        continue;
       }
+
+      // Recorded outside the send's try/catch: if only this write fails the email *was* delivered,
+      // so it must not be treated as a failed send and retried (that would email it again).
+      retries.delete(key);
+      try {
+        db.prepare(
+          `INSERT OR IGNORE INTO medication_reminders (event_id, user_id, due_at, sent_at) VALUES (?, ?, ?, ?)`
+        ).run(reminder.eventId, recipient.userId, reminder.dueAt, new Date(nowMs).toISOString());
+      } catch (e) {
+        log.error(`Could not record a sent reminder (household ${slug}, dose ${reminder.eventId}): ${e.message}`);
+        retries.set(key, { attempts: 0, nextTryAt: Infinity });
+        continue;
+      }
+      log.log(`Reminder email sent (household ${slug}, user ${recipient.userId}, dose ${reminder.eventId})`);
     }
   }
 }
