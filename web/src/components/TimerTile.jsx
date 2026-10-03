@@ -2,15 +2,17 @@ import { useEffect, useState } from 'react';
 import { EventTile } from './EventTile.jsx';
 import { Sheet } from './Sheet.jsx';
 import { api } from '../api/client.js';
+import { t, tOr, hasMessage } from '../i18n/index.js';
 import { formatDuration } from '../lib/dateUtils.js';
 
 /**
  * A tile for an event type that runs as a start/stop timer (breastfeeding, contraction).
- * `startChoices`: [{ key, label }] shown when starting (e.g. Left/Right/Both). A single
+ * `label` may be a ready string or `labelKey` (catalog key); choices likewise take `label` or `labelKey`.
+ * `startChoices`: [{ key, label | labelKey }] shown when starting (e.g. Left/Right/Both). A single
  * choice starts immediately on tap with no picker.
  * `stopChoices`: optional [{ key, label }] shown before stopping (e.g. contraction intensity).
  */
-export function TimerTile({ type, icon, label, color, startChoices, stopChoices, onChange }) {
+export function TimerTile({ type, icon, label: labelProp, labelKey, color, startChoices, stopChoices, onChange }) {
   const [active, setActive] = useState(undefined);
   const [tick, setTick] = useState(0);
   const [pickingStart, setPickingStart] = useState(false);
@@ -70,22 +72,31 @@ export function TimerTile({ type, icon, label, color, startChoices, stopChoices,
     }
   }
 
+  const label = labelKey ? t(labelKey) : labelProp;
+  const choiceText = (c) => (c.labelKey ? t(c.labelKey) : c.label);
+  const startKey = `tiles.timer.start.${type}`;
+  const startTitle = hasMessage(startKey) ? t(startKey) : t('tiles.timer.startTitle', { label });
+
+  const duration = active ? formatDuration(active.startedAt) : '';
+  const side = active?.details?.side;
   const sub = active
-    ? `${active.details?.side ? `${active.details.side} · ` : ''}${formatDuration(active.startedAt)}`
+    ? side
+      ? t('tiles.subWithDuration', { detail: tOr('side', side), duration })
+      : duration
     : undefined;
 
   return (
     <>
       <EventTile
         icon={active ? '⏹' : icon}
-        label={active ? `${label} — Stop` : label}
+        label={active ? t('tiles.timer.stopLabel', { label }) : label}
         sub={sub}
         color={color}
         running={!!active}
         onClick={handleTap}
       />
       {pickingStart && (
-        <Sheet title={`Start ${label.toLowerCase()}`} onClose={() => setPickingStart(false)}>
+        <Sheet title={startTitle} onClose={() => setPickingStart(false)}>
           <div className="choice-row">
             {startChoices.map((c) => (
               <button
@@ -95,14 +106,14 @@ export function TimerTile({ type, icon, label, color, startChoices, stopChoices,
                 disabled={busy}
                 onClick={() => start(c.key)}
               >
-                {c.label}
+                {choiceText(c)}
               </button>
             ))}
           </div>
         </Sheet>
       )}
       {pickingStop && (
-        <Sheet title="Intensity (optional)" onClose={() => stop()}>
+        <Sheet title={t('tiles.timer.intensityTitle')} onClose={() => stop()}>
           <div className="choice-row">
             {stopChoices.map((c) => (
               <button
@@ -112,12 +123,12 @@ export function TimerTile({ type, icon, label, color, startChoices, stopChoices,
                 disabled={busy}
                 onClick={() => stop(c.key)}
               >
-                {c.label}
+                {choiceText(c)}
               </button>
             ))}
           </div>
           <button className="btn btn-block" disabled={busy} onClick={() => stop()}>
-            Skip
+            {t('common.skip')}
           </button>
         </Sheet>
       )}

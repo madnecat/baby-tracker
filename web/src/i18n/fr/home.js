@@ -1,0 +1,23 @@
+export default {
+  'home.title': 'Saisie rapide',
+  'home.subject.baby': '👶 Bébé',
+  'home.subject.mom': '🤰 Maman',
+  'home.start': 'Démarrer',
+  'home.sub.medication': 'Vitamine D, etc.',
+  'home.sub.growth': 'Poids/taille/PC',
+  'home.other': 'Autre',
+  'home.sub.customMedication': 'Médicament personnalisé',
+  'home.intensity.mild': 'Légère',
+  'home.intensity.moderate': 'Modérée',
+  'home.intensity.strong': 'Forte',
+
+  'home.toast.feedingUpdated': 'Repas mis à jour',
+  'home.toast.sleepUpdated': 'Sommeil mis à jour',
+  'home.toast.outingUpdated': 'Sortie mise à jour',
+  'home.toast.contractionUpdated': 'Contraction mise à jour',
+  'home.toast.medicationNamed': 'Enregistré : {name}',
+  'home.toast.diaper': 'Couche enregistrée',
+  'home.toast.temperature': 'Température enregistrée',
+  'home.toast.growth': 'Mesure de croissance enregistrée',
+  'home.toast.medication': 'Médicament enregistré',
+};

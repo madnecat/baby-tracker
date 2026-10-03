@@ -1,12 +1,13 @@
 import { NavLink } from 'react-router-dom';
+import { t } from '../i18n/index.js';
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Log', icon: '✏️', end: true },
-  { to: '/history', label: 'History', icon: '📜' },
-  { to: '/charts', label: 'Charts', icon: '📈' },
-  { to: '/mum', label: 'Mum', icon: '🤰' },
-  { to: '/calendar', label: 'Calendar', icon: '📅' },
-  { to: '/settings', label: 'Settings', icon: '⚙️' },
+  { to: '/', labelKey: 'nav.log', icon: '✏️', end: true },
+  { to: '/history', labelKey: 'nav.history', icon: '📜' },
+  { to: '/charts', labelKey: 'nav.charts', icon: '📈' },
+  { to: '/mum', labelKey: 'nav.mum', icon: '🤰' },
+  { to: '/calendar', labelKey: 'nav.calendar', icon: '📅' },
+  { to: '/settings', labelKey: 'nav.settings', icon: '⚙️' },
 ];
 
 export function Layout({ children }) {
@@ -24,7 +25,7 @@ export function Layout({ children }) {
             <span className="nav-icon" aria-hidden="true">
               {item.icon}
             </span>
-            <span className="nav-label">{item.label}</span>
+            <span className="nav-label">{t(item.labelKey)}</span>
           </NavLink>
         ))}
       </nav>

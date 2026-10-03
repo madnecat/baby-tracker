@@ -2,33 +2,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { Area, CartesianGrid, ComposedChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useColorScheme } from '../lib/useColorScheme.js';
 import { CHART_CHROME, EVENT_COLORS, resolve } from '../lib/palette.js';
+import { t } from '../i18n/index.js';
+import { formatClock, formatDurationMs } from '../lib/dateUtils.js';
 
 const INTENSITY_HEIGHT = { mild: 1, moderate: 2, strong: 3, unspecified: 1.5 };
-const HEIGHT_LABEL = { 0: '', 1: 'mild', 1.5: '', 2: 'moderate', 3: 'strong' };
+// Y-axis tick (numeric level) -> stored intensity value whose label is shown.
+const HEIGHT_INTENSITY = { 1: 'mild', 2: 'moderate', 3: 'strong' };
 
-const RANGES = [
-  { label: '1h', hours: 1 },
-  { label: '2h', hours: 2 },
-  { label: '4h', hours: 4 },
-  { label: '12h', hours: 12 },
-  { label: '24h', hours: 24 },
-];
+const RANGE_HOURS = [1, 2, 4, 12, 24];
+const rangeText = (hours) => t('time.h', { h: hours });
 const DEFAULT_RANGE_HOURS = 2;
-
-/** "45s" / "1m 20s" / "1h 30m" — plateau widths and gaps are short, so seconds matter here in a
- * way they don't for formatDuration's event durations. */
-function shortDuration(ms) {
-  const seconds = Math.round(ms / 1000);
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 60) {
-    const s = seconds % 60;
-    return s === 0 || minutes >= 10 ? `${minutes}m` : `${Math.floor(seconds / 60)}m ${s}s`;
-  }
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m === 0 ? `${h}h` : `${h}h ${m}m`;
-}
 
 /**
  * Mimics a real contraction monitor (toco) trace: flat at 0 baseline, a square
@@ -64,7 +47,7 @@ export function ContractionChart({ contractions }) {
 
   const windowStart = now - rangeHours * 3600000;
 
-  const { points, count, summary } = useMemo(() => {
+  const { points, count, avgGapMs, avgLenMs } = useMemo(() => {
     const inWindow = contractions
       .map((c) => {
         const startMs = new Date(c.startedAt).getTime();
@@ -101,35 +84,38 @@ export function ContractionChart({ contractions }) {
       ? timed.reduce((sum, x) => sum + (x.endMs - x.startMs), 0) / timed.length
       : null;
 
-    const parts = [`${inWindow.length} contraction${inWindow.length === 1 ? '' : 's'}`];
-    if (avgGapMs != null) parts.push(`every ~${shortDuration(avgGapMs)}`);
-    if (avgLenMs != null) parts.push(`~${shortDuration(avgLenMs)} each`);
-
-    return { points: pts, count: inWindow.length, summary: parts.join(' · ') };
+    return { points: pts, count: inWindow.length, avgGapMs, avgLenMs };
   }, [contractions, windowStart, now]);
 
-  const rangeLabel = RANGES.find((r) => r.hours === rangeHours)?.label ?? `${rangeHours}h`;
+  const rangeLabel = rangeText(rangeHours);
+  const summary = [
+    t('chart.contractions.count', { count }),
+    avgGapMs != null ? t('chart.contractions.every', { duration: formatDurationMs(avgGapMs) }) : null,
+    avgLenMs != null ? t('chart.contractions.each', { duration: formatDurationMs(avgLenMs) }) : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <div className="chart-card">
-      <h3>Contractions</h3>
+      <h3>{t('chart.contractions.title')}</h3>
       <div className="range-tabs" style={{ padding: '0 8px', marginBottom: 8 }}>
-        {RANGES.map((r) => (
+        {RANGE_HOURS.map((hours) => (
           <button
-            key={r.hours}
-            className={rangeHours === r.hours ? 'active' : ''}
-            onClick={() => setRangeHours(r.hours)}
+            key={hours}
+            className={rangeHours === hours ? 'active' : ''}
+            onClick={() => setRangeHours(hours)}
           >
-            {r.label}
+            {rangeText(hours)}
           </button>
         ))}
       </div>
       {count === 0 ? (
-        <div className="empty-state">No contractions in the last {rangeLabel}.</div>
+        <div className="empty-state">{t('chart.contractions.empty', { range: rangeLabel, count: rangeHours })}</div>
       ) : (
         <>
           <p style={{ margin: '0 8px 8px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-            Last {rangeLabel} — {summary}
+            {t('chart.contractions.summaryLine', { range: rangeLabel, summary, count: rangeHours })}
           </p>
           <ResponsiveContainer width="100%" height={220}>
             <ComposedChart data={points} margin={{ top: 8, right: 16, left: -8, bottom: 0 }}>
@@ -138,7 +124,7 @@ export function ContractionChart({ contractions }) {
                 dataKey="t"
                 type="number"
                 domain={[windowStart, now]}
-                tickFormatter={(ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                tickFormatter={(ms) => formatClock(ms)}
                 tick={{ fontSize: 10, fill: muted }}
                 axisLine={{ stroke: axis }}
                 tickLine={false}
@@ -148,7 +134,7 @@ export function ContractionChart({ contractions }) {
                 type="number"
                 domain={[0, 3.5]}
                 ticks={[1, 2, 3]}
-                tickFormatter={(v) => HEIGHT_LABEL[v] ?? ''}
+                tickFormatter={(v) => (HEIGHT_INTENSITY[v] ? t(`chart.intensity.${HEIGHT_INTENSITY[v]}`) : '')}
                 tick={{ fontSize: 10, fill: muted }}
                 axisLine={false}
                 tickLine={false}
@@ -158,11 +144,14 @@ export function ContractionChart({ contractions }) {
                 contentStyle={{ background: surface, border: `1px solid ${grid}`, borderRadius: 8 }}
                 labelStyle={{ color: text }}
                 itemStyle={{ color: text }}
-                labelFormatter={(ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                labelFormatter={(ms) => formatClock(ms)}
                 formatter={(value, _name, props) => {
                   const c = props.payload.meta;
                   if (!c) return [null, null];
-                  return [c.details?.intensity || 'unspecified', 'Contraction'];
+                  return [
+                    t(`chart.intensity.${c.details?.intensity || 'unspecified'}`),
+                    t('events.type.contraction'),
+                  ];
                 }}
               />
               <Area
@@ -180,8 +169,7 @@ export function ContractionChart({ contractions }) {
         </>
       )}
       <p style={{ margin: '0 8px 8px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-        Like a contraction monitor trace: width of each plateau = duration, height = intensity,
-        flat stretches = gap between contractions.
+        {t('chart.contractions.hint')}
       </p>
     </div>
   );

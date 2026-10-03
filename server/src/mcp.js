@@ -114,22 +114,27 @@ function buildServer(ctx) {
     'log_breastfeeding',
     {
       description:
-        'Log a completed breastfeeding session (use for retroactive/past feeds). side is required — if the user has not said which side, ASK before calling this tool. Do not guess.',
-      inputSchema: z.object({
-        side: z.enum(['left', 'right', 'both']),
-        startedAt: z.string().datetime().describe('ISO 8601 timestamp the feed started'),
-        endedAt: z.string().datetime().describe('ISO 8601 timestamp the feed ended'),
-      }),
+        'Log a completed breastfeeding session (use for retroactive/past feeds). side is required — if the user has not said which side, ASK before calling this tool. Do not guess. When side is "both", firstSide is the side the feed started on (the app uses it to suggest the next side) — ask if the user has not said, and leave it out if they do not know.',
+      inputSchema: z
+        .object({
+          side: z.enum(['left', 'right', 'both']),
+          firstSide: z.enum(['left', 'right']).optional().describe('Only with side "both": which side came first'),
+          startedAt: z.string().datetime().describe('ISO 8601 timestamp the feed started'),
+          endedAt: z.string().datetime().describe('ISO 8601 timestamp the feed ended'),
+        })
+        .refine((v) => v.side === 'both' || v.firstSide === undefined, {
+          message: 'firstSide can only be given when side is "both"',
+        }),
     },
-    async ({ side, startedAt, endedAt }) => {
+    async ({ side, firstSide, startedAt, endedAt }) => {
       const event = createEvent(db, {
         type: 'breastfeeding',
         startedAt,
         endedAt,
-        details: { side },
+        details: firstSide ? { side, firstSide } : { side },
         createdBy: userId,
       });
-      return textResult(`Logged breastfeeding (${side}, id ${event.id}) from ${startedAt} to ${endedAt}.`);
+      return textResult(`Logged breastfeeding (${side}${firstSide ? `, ${firstSide} first` : ''}, id ${event.id}) from ${startedAt} to ${endedAt}.`);
     }
   );
 
@@ -227,22 +232,23 @@ function buildServer(ctx) {
     'log_medication',
     {
       description:
-        'Log a medication dose taken by mum. name is required — ask if unclear. For intervalHours, use the correct standard spacing if you know the medication (e.g. paracetamol 6h, ibuprofen 6h) rather than the generic 6h default — and if you are not confident of the correct interval, ask the user instead of guessing, since this drives the "safe to take again" timing shown in the app.',
+        'Log a medication dose taken by mum (default) or by the baby (who: "baby"). name is required — ask if unclear. For intervalHours, use the correct standard spacing if you know the medication (e.g. paracetamol 6h, ibuprofen 6h) rather than the generic 6h default — and if you are not confident of the correct interval, ask the user instead of guessing, since this drives the "safe to take again" timing shown in the app.',
       inputSchema: z.object({
         name: z.string(),
+        who: z.enum(['mom', 'baby']).default('mom').describe('Who took the dose — "mom" unless the user says it was the baby'),
         doseAmount: z.number().optional(),
         doseUnit: z.string().optional(),
         intervalHours: z.number().positive().default(6).describe('Minimum hours before the next dose — see tool description'),
         at: z.string().datetime().optional(),
       }),
     },
-    async ({ name, doseAmount, doseUnit, intervalHours, at }) => {
+    async ({ name, who, doseAmount, doseUnit, intervalHours, at }) => {
       const when = at || nowIso();
       const event = createEvent(db, {
         type: 'medication',
         startedAt: when,
         endedAt: when,
-        details: { name, doseAmount: doseAmount ?? null, doseUnit: doseUnit ?? null, intervalHours },
+        details: { name, who, doseAmount: doseAmount ?? null, doseUnit: doseUnit ?? null, intervalHours },
         createdBy: userId,
       });
       return textResult(`Logged ${name} dose (id ${event.id}) at ${when}. Next safe dose from ${new Date(new Date(when).getTime() + intervalHours * 3600000).toISOString()}.`);

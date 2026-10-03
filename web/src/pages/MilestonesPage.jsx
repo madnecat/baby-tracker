@@ -16,12 +16,17 @@ import {
   subMonths,
 } from 'date-fns';
 import { api } from '../api/client.js';
-import { MILESTONES, MILESTONE_CATEGORIES } from '../data/milestones.js';
+import {
+  MILESTONES,
+  MILESTONE_CATEGORIES,
+  categoryLabel,
+  milestoneDescription,
+  milestoneTitle,
+} from '../data/milestones.js';
+import { dateFnsLocale, t } from '../i18n/index.js';
 import { Sheet } from '../components/Sheet.jsx';
 import { useColorScheme } from '../lib/useColorScheme.js';
 import { resolve } from '../lib/palette.js';
-
-const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export default function MilestonesPage() {
   const [child, setChild] = useState(null);
@@ -82,43 +87,52 @@ export default function MilestonesPage() {
 
   const upcoming = rows.filter((m) => !m.done).slice(0, 5);
 
-  if (loading) return <p>Loading…</p>;
+  if (loading) return <p>{t('common.loading')}</p>;
 
   if (!child) {
     return (
       <div>
-        <h1 className="page-title">Calendar</h1>
+        <h1 className="page-title">{t('milestonesPage.title')}</h1>
         <div className="empty-state">
-          Set up your child's date of birth on the Growth page to see the milestone calendar.
+          {t('milestonesPage.noChild')}
         </div>
       </div>
     );
   }
 
   const today = startOfDay(new Date());
+  const locale = dateFnsLocale();
   const selectedMilestones = selectedDay ? byDay.get(format(selectedDay, 'yyyy-MM-dd')) || [] : [];
 
   return (
     <div>
-      <h1 className="page-title">Calendar</h1>
+      <h1 className="page-title">{t('milestonesPage.title')}</h1>
       <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: -8 }}>
-        UK milestones, plus French nationality steps. Not legal or medical advice.
+        {t('milestonesPage.disclaimer')}
       </p>
 
       <div className="calendar-nav">
-        <button className="btn" onClick={() => setMonth((m) => subMonths(m, 1))}>
+        <button
+          className="btn"
+          aria-label={t('milestonesPage.prevMonth')}
+          onClick={() => setMonth((m) => subMonths(m, 1))}
+        >
           ‹
         </button>
-        <strong>{format(month, 'MMMM yyyy')}</strong>
-        <button className="btn" onClick={() => setMonth((m) => addMonths(m, 1))}>
+        <strong>{format(month, 'MMMM yyyy', { locale })}</strong>
+        <button
+          className="btn"
+          aria-label={t('milestonesPage.nextMonth')}
+          onClick={() => setMonth((m) => addMonths(m, 1))}
+        >
           ›
         </button>
       </div>
 
       <div className="calendar-grid">
-        {WEEKDAYS.map((d) => (
-          <div key={d} className="calendar-weekday">
-            {d}
+        {gridDays.slice(0, 7).map((day) => (
+          <div key={format(day, 'yyyy-MM-dd')} className="calendar-weekday">
+            {format(day, 'EEE', { locale })}
           </div>
         ))}
         {gridDays.map((day) => {
@@ -156,8 +170,8 @@ export default function MilestonesPage() {
         })}
       </div>
 
-      <h2 className="section-title">Next up</h2>
-      {upcoming.length === 0 && <div className="empty-state">Everything's marked done 🎉</div>}
+      <h2 className="section-title">{t('milestonesPage.nextUp')}</h2>
+      {upcoming.length === 0 && <div className="empty-state">{t('milestonesPage.allDone')}</div>}
       {upcoming.map((m) => (
         <div
           key={m.key}
@@ -170,17 +184,18 @@ export default function MilestonesPage() {
             style={{ background: resolve(MILESTONE_CATEGORIES[m.category].color, isDark) }}
           />
           <div className="details">
-            <div>{m.title}</div>
+            <div>{milestoneTitle(m)}</div>
             <div className="time">
-              {format(m.dueDate, 'd MMM yyyy')}
-              {isBefore(m.dueDate, today) ? ' — overdue' : ''}
+              {isBefore(m.dueDate, today)
+                ? t('milestonesPage.overdue', { date: format(m.dueDate, 'd MMM yyyy', { locale }) })
+                : format(m.dueDate, 'd MMM yyyy', { locale })}
             </div>
           </div>
         </div>
       ))}
 
       {selectedDay && (
-        <Sheet title={format(selectedDay, 'EEEE d MMMM yyyy')} onClose={() => setSelectedDay(null)}>
+        <Sheet title={format(selectedDay, 'EEEE d MMMM yyyy', { locale })} onClose={() => setSelectedDay(null)}>
           {selectedMilestones.map((m) => {
             const cat = MILESTONE_CATEGORIES[m.category];
             return (
@@ -189,22 +204,23 @@ export default function MilestonesPage() {
                   <input
                     type="checkbox"
                     checked={m.done}
+                    aria-label={t('milestonesPage.markDone', { title: milestoneTitle(m) })}
                     onChange={(e) => toggle(m.key, e.target.checked)}
                     style={{ width: 20, height: 20, marginTop: 2, flexShrink: 0 }}
                   />
                   <div style={{ flex: 1 }}>
                     <strong style={{ textDecoration: m.done ? 'line-through' : 'none' }}>
-                      {m.title}
+                      {milestoneTitle(m)}
                     </strong>
                     <div
                       className="legend-swatch"
                       style={{ margin: '4px 0', color: 'var(--text-muted)', fontSize: '0.75rem' }}
                     >
                       <span className="dot" style={{ background: resolve(cat.color, isDark) }} />
-                      {cat.label}
+                      {categoryLabel(m.category)}
                     </div>
                     <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                      {m.description}
+                      {milestoneDescription(m)}
                     </p>
                   </div>
                 </div>

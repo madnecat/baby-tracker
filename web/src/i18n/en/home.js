@@ -1,0 +1,23 @@
+export default {
+  'home.title': 'Quick log',
+  'home.subject.baby': '👶 Baby',
+  'home.subject.mom': '🤰 Mum',
+  'home.start': 'Start',
+  'home.sub.medication': 'Vitamin D, etc.',
+  'home.sub.growth': 'Weight/height/HC',
+  'home.other': 'Other',
+  'home.sub.customMedication': 'Custom medication',
+  'home.intensity.mild': 'Mild',
+  'home.intensity.moderate': 'Moderate',
+  'home.intensity.strong': 'Strong',
+
+  'home.toast.feedingUpdated': 'Feeding updated',
+  'home.toast.sleepUpdated': 'Sleep updated',
+  'home.toast.outingUpdated': 'Outing updated',
+  'home.toast.contractionUpdated': 'Contraction updated',
+  'home.toast.medicationNamed': '{name} logged',
+  'home.toast.diaper': 'Diaper logged',
+  'home.toast.temperature': 'Temperature logged',
+  'home.toast.growth': 'Growth measurement logged',
+  'home.toast.medication': 'Medication logged',
+};

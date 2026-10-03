@@ -383,7 +383,7 @@ const householdsOpenFailureLogged = new Set();
  * file doesn't stop other households from logging in or using their
  * sessions and API tokens.
  */
-function allHouseholdDbs() {
+export function allHouseholdDbs() {
   const result = [];
   for (const slug of listHouseholdSlugs()) {
     if (unavailableHouseholds.has(slug)) continue;
@@ -437,11 +437,27 @@ function findAcrossHouseholds(query) {
   return null;
 }
 
+/**
+ * Records which user is Mum for a household, from the add-on configuration (the web UI can't
+ * change it — the admin decides). `username` null/unknown clears it, so removing the option and
+ * restarting really takes effect. Run it after migrations (the column is added by migration 4).
+ * Returns the resolved user id, or null.
+ */
+export function setHouseholdMom(slug, username) {
+  const db = getHouseholdDb(slug);
+  const user = username ? db.prepare(`SELECT id FROM users WHERE username = ?`).get(username) : null;
+  db.prepare(
+    `INSERT INTO settings (id, mom_user_id) VALUES (1, ?)
+     ON CONFLICT(id) DO UPDATE SET mom_user_id = excluded.mom_user_id`
+  ).run(user?.id ?? null);
+  return user?.id ?? null;
+}
+
 export function findHouseholdBySessionToken(token) {
   return findAcrossHouseholds((db) =>
     db
       .prepare(
-        `SELECT users.id, users.username, users.display_name AS displayName
+        `SELECT users.id, users.username, users.display_name AS displayName, users.language
          FROM sessions JOIN users ON users.id = sessions.user_id
          WHERE sessions.token = ? AND sessions.expires_at > datetime('now')`
       )
@@ -457,7 +473,7 @@ export function findHouseholdByTokenHash(tokenHash) {
   return findAcrossHouseholds((db) =>
     db
       .prepare(
-        `SELECT users.id, users.username, users.display_name AS displayName, api_tokens.id AS tokenId
+        `SELECT users.id, users.username, users.display_name AS displayName, users.language, api_tokens.id AS tokenId
          FROM api_tokens JOIN users ON users.id = api_tokens.user_id
          WHERE api_tokens.token_hash = ?`
       )

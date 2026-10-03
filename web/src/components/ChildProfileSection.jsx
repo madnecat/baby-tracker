@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { api } from '../api/client.js';
+import { api, errorMessage } from '../api/client.js';
+import { t } from '../i18n/index.js';
 
 export function ChildProfileSection() {
   const [name, setName] = useState('');
@@ -28,9 +29,9 @@ export function ChildProfileSection() {
     setStatus(null);
     try {
       await api.putChild({ name, dateOfBirth: dob, sex });
-      setStatus({ ok: true, message: 'Saved.' });
+      setStatus({ ok: true, message: t('profile.saved') });
     } catch (err) {
-      setStatus({ ok: false, message: err.message });
+      setStatus({ ok: false, message: errorMessage(err) });
     } finally {
       setSaving(false);
     }
@@ -40,18 +41,18 @@ export function ChildProfileSection() {
 
   return (
     <>
-      <h2 className="section-title">Baby profile</h2>
+      <h2 className="section-title">{t('profile.title')}</h2>
       <div className="card" style={{ marginBottom: 20 }}>
         <p style={{ marginTop: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-          Used for the WHO growth percentile charts (needs date of birth + sex).
+          {t('profile.hint')}
         </p>
         <form onSubmit={save}>
           <div className="field">
-            <label htmlFor="babyname">Name</label>
+            <label htmlFor="babyname">{t('profile.name')}</label>
             <input id="babyname" value={name} onChange={(e) => setName(e.target.value)} required />
           </div>
           <div className="field">
-            <label htmlFor="babydob">Date of birth</label>
+            <label htmlFor="babydob">{t('profile.dob')}</label>
             <input
               id="babydob"
               type="date"
@@ -66,19 +67,19 @@ export function ChildProfileSection() {
               className={`choice-btn${sex === 'female' ? ' selected' : ''}`}
               onClick={() => setSex('female')}
             >
-              Girl
+              {t('profile.sex.female')}
             </button>
             <button
               type="button"
               className={`choice-btn${sex === 'male' ? ' selected' : ''}`}
               onClick={() => setSex('male')}
             >
-              Boy
+              {t('profile.sex.male')}
             </button>
           </div>
           {status && <p className={status.ok ? 'success-text' : 'error-text'}>{status.message}</p>}
           <button className="btn btn-primary btn-block" disabled={saving}>
-            {saving ? 'Saving…' : 'Save profile'}
+            {saving ? t('common.saving') : t('profile.save')}
           </button>
         </form>
       </div>

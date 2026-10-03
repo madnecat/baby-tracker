@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Sheet } from './Sheet.jsx';
-import { api } from '../api/client.js';
+import { api, errorMessage } from '../api/client.js';
+import { t } from '../i18n/index.js';
 
 export function OutingSheet({ onClose, onSaved }) {
   const [location, setLocation] = useState('');
@@ -21,24 +22,24 @@ export function OutingSheet({ onClose, onSaved }) {
       });
       onSaved();
     } catch (e) {
-      setError(e.message);
+      setError(errorMessage(e));
       setSaving(false);
     }
   }
 
   return (
-    <Sheet title="Start an outing" onClose={onClose}>
+    <Sheet title={t('sheets.outing.title')} onClose={onClose}>
       <div className="field">
-        <label htmlFor="location">Location (optional)</label>
+        <label htmlFor="location">{t('sheets.outing.location')}</label>
         <input id="location" value={location} onChange={(e) => setLocation(e.target.value)} />
       </div>
       <div className="field">
-        <label htmlFor="notes">Notes (optional)</label>
+        <label htmlFor="notes">{t('sheets.notesOptional')}</label>
         <input id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
       </div>
       {error && <p className="error-text">{error}</p>}
       <button className="btn btn-primary btn-block" disabled={saving} onClick={submit}>
-        {saving ? 'Saving…' : 'Start outing'}
+        {saving ? t('common.saving') : t('sheets.outing.submit')}
       </button>
     </Sheet>
   );

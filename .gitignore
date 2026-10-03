@@ -6,3 +6,4 @@ server/data-dev/
 *.db-wal
 *.db-shm
 **/*.local.md
+server/.env.local

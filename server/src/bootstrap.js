@@ -5,10 +5,11 @@ import {
   markConfigListHouseholdRemoved,
   provisionHousehold,
   reconcileHouseholdUsernames,
+  setHouseholdMom,
   syncConfigListHousehold,
 } from './households.js';
 
-function loadOptions() {
+export function loadOptions() {
   const optionsPath = process.env.OPTIONS_PATH || '/data/options.json';
   if (fs.existsSync(optionsPath)) {
     try {
@@ -32,6 +33,15 @@ function loadOptions() {
     household2_parent2_password: process.env.HOUSEHOLD2_PARENT2_PASSWORD,
     household2_parent2_display_name: process.env.HOUSEHOLD2_PARENT2_DISPLAY_NAME,
     households: parseHouseholdsEnv(process.env.HOUSEHOLDS_JSON),
+    mom_parent: process.env.MOM_PARENT,
+    household2_mom_parent: process.env.HOUSEHOLD2_MOM_PARENT,
+    smtp_host: process.env.SMTP_HOST,
+    smtp_port: process.env.SMTP_PORT,
+    smtp_user: process.env.SMTP_USER,
+    smtp_password: process.env.SMTP_PASSWORD,
+    smtp_from: process.env.SMTP_FROM,
+    public_url: process.env.PUBLIC_URL,
+    admin_email: process.env.ADMIN_EMAIL,
   };
 }
 
@@ -177,6 +187,56 @@ export function bootstrapListedHouseholds() {
       markConfigListHouseholdRemoved(slug);
     } catch (e) {
       console.error(`Could not record household "${slug}" as removed from the list: ${e.message}`);
+    }
+  }
+}
+
+/**
+ * Applies the `mom_parent` options (1 or 2 = which configured parent is Mum) to each household,
+ * on every boot, so changing the option and restarting takes effect. Mum is resolved by the
+ * *configured username* — not by account creation order, which shifts when parent1 is blank — and
+ * must run after the three bootstrap calls above (they may rename accounts) and after the
+ * migrations (the column is added by migration 4). A household with no valid option has no Mum,
+ * which means Mum's reminders are simply not sent (never sent to everyone instead).
+ */
+export function applyMomRoles(availableSlugs) {
+  const options = loadOptions();
+  const available = new Set(availableSlugs);
+
+  const assignments = [];
+  const firstParents = [options.parent1_username, options.parent2_username];
+  assignments.push({ slug: 'household-1', mom: options.mom_parent, usernames: firstParents });
+
+  if (options.household2_slug) {
+    assignments.push({
+      slug: options.household2_slug,
+      mom: options.household2_mom_parent,
+      usernames: [options.household2_parent1_username, options.household2_parent2_username],
+    });
+  }
+
+  const reserved = new Set(assignments.map((a) => a.slug));
+  for (const entry of Array.isArray(options.households) ? options.households : []) {
+    if (!entry?.slug || reserved.has(entry.slug)) continue;
+    reserved.add(entry.slug);
+    assignments.push({
+      slug: entry.slug,
+      mom: entry.mom_parent,
+      usernames: [entry.parent1_username, entry.parent2_username],
+    });
+  }
+
+  for (const { slug, mom, usernames } of assignments) {
+    if (!available.has(slug)) continue;
+    const slot = Number(mom);
+    const username = slot === 1 || slot === 2 ? usernames[slot - 1] : null;
+    try {
+      const userId = setHouseholdMom(slug, username || null);
+      if (mom && userId == null) {
+        console.warn(`Household "${slug}": mom_parent ${mom} does not match a configured account — Mum's reminders are off.`);
+      }
+    } catch (e) {
+      console.error(`Could not apply mom_parent for household "${slug}": ${e.message}`);
     }
   }
 }

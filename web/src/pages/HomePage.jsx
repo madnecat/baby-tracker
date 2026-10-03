@@ -11,7 +11,13 @@ import { NextSleepCard } from '../components/NextSleepCard.jsx';
 import { GrowthSheet } from '../components/GrowthSheet.jsx';
 import { api } from '../api/client.js';
 import { EVENT_COLORS } from '../lib/palette.js';
-import { MEDICATION_PRESETS, getCustomPresets } from '../lib/medications.js';
+import {
+  MEDICATION_PRESETS,
+  getCustomPresets,
+  medicationDisplayName,
+  medicationsFor,
+} from '../lib/medications.js';
+import { t } from '../i18n/index.js';
 
 export default function HomePage() {
   const [subject, setSubject] = useState('baby');
@@ -56,28 +62,35 @@ export default function HomePage() {
       .catch(() => setChild(null));
   }, []);
 
-  const customPresets = useMemo(() => getCustomPresets(medicationEvents), [medicationEvents]);
+  const momMedicationEvents = useMemo(() => medicationsFor(medicationEvents, 'mom'), [medicationEvents]);
+  const babyMedicationEvents = useMemo(() => medicationsFor(medicationEvents, 'baby'), [medicationEvents]);
+  const customPresets = useMemo(() => getCustomPresets(momMedicationEvents, 'mom'), [momMedicationEvents]);
+  const babyCustomPresets = useMemo(
+    () => getCustomPresets(babyMedicationEvents, 'baby'),
+    [babyMedicationEvents]
+  );
 
-  function showToast(message) {
-    setToast(message);
+  // The toast keeps a message KEY (plus the stored medication name), resolved when rendered.
+  function showToast(key, medicationName) {
+    setToast({ key, medicationName });
     setTimeout(() => setToast(null), 1800);
   }
 
-  function closeAndToast(message) {
+  function closeAndToast(key) {
     setOpenSheet(null);
-    showToast(message);
+    showToast(key);
   }
 
   return (
     <div>
-      <h1 className="page-title">Quick log</h1>
+      <h1 className="page-title">{t('home.title')}</h1>
 
       <div className="range-tabs" style={{ marginBottom: 16 }}>
         <button className={subject === 'baby' ? 'active' : ''} onClick={() => setSubject('baby')}>
-          👶 Baby
+          {t('home.subject.baby')}
         </button>
         <button className={subject === 'mom' ? 'active' : ''} onClick={() => setSubject('mom')}>
-          🤰 Mum
+          {t('home.subject.mom')}
         </button>
       </div>
 
@@ -94,38 +107,57 @@ export default function HomePage() {
       <div className="tile-grid" style={{ display: subject === 'baby' ? 'grid' : 'none' }}>
         <EventTile
           icon="💧"
-          label="Diaper"
+          label={t('events.type.diaper')}
           color={EVENT_COLORS.diaper}
           onClick={() => setOpenSheet('diaper')}
         />
         <FeedingTile
           onChange={() => {
-            showToast('Feeding updated');
+            showToast('home.toast.feedingUpdated');
             loadRecentEvents();
           }}
         />
         <TimerTile
           type="sleep"
           icon="😴"
-          label="Sleep"
+          label={t('events.type.sleep')}
           color={EVENT_COLORS.sleep}
-          startChoices={[{ key: null, label: 'Start' }]}
+          startChoices={[{ key: null, label: t('home.start') }]}
           onChange={() => {
-            showToast('Sleep updated');
+            showToast('home.toast.sleepUpdated');
             loadRecentEvents(); // otherwise the card keeps counting down for a baby already asleep
           }}
         />
-        <OutingTile color={EVENT_COLORS.outing} onChange={() => showToast('Outing updated')} />
+        <OutingTile color={EVENT_COLORS.outing} onChange={() => showToast('home.toast.outingUpdated')} />
+        {babyCustomPresets.map((preset) => (
+          <MedicationTile
+            key={preset.key}
+            preset={preset}
+            who="baby"
+            medicationEvents={babyMedicationEvents}
+            onLogged={() => {
+              loadMedicationEvents();
+              showToast('home.toast.medicationNamed', preset.name);
+            }}
+          />
+        ))}
+        <EventTile
+          icon="💊"
+          label={t('events.type.medication')}
+          sub={t('home.sub.medication')}
+          color={EVENT_COLORS.medication}
+          onClick={() => setOpenSheet('medication-other-baby')}
+        />
         <EventTile
           icon="🌡️"
-          label="Temperature"
+          label={t('events.type.temperature')}
           color={EVENT_COLORS.temperature}
           onClick={() => setOpenSheet('temperature-baby')}
         />
         <EventTile
           icon="📏"
-          label="Growth"
-          sub="Weight/height/HC"
+          label={t('events.type.growth')}
+          sub={t('home.sub.growth')}
           onClick={() => setOpenSheet('growth')}
         />
       </div>
@@ -134,24 +166,24 @@ export default function HomePage() {
         <TimerTile
           type="contraction"
           icon="⏱"
-          label="Contraction"
+          label={t('events.type.contraction')}
           color={EVENT_COLORS.contraction}
-          startChoices={[{ key: null, label: 'Start' }]}
+          startChoices={[{ key: null, label: t('home.start') }]}
           stopChoices={[
-            { key: 'mild', label: 'Mild' },
-            { key: 'moderate', label: 'Moderate' },
-            { key: 'strong', label: 'Strong' },
+            { key: 'mild', label: t('home.intensity.mild') },
+            { key: 'moderate', label: t('home.intensity.moderate') },
+            { key: 'strong', label: t('home.intensity.strong') },
           ]}
-          onChange={() => showToast('Contraction updated')}
+          onChange={() => showToast('home.toast.contractionUpdated')}
         />
         {MEDICATION_PRESETS.map((preset) => (
           <MedicationTile
             key={preset.key}
             preset={preset}
-            medicationEvents={medicationEvents}
+            medicationEvents={momMedicationEvents}
             onLogged={() => {
               loadMedicationEvents();
-              showToast(`${preset.name} logged`);
+              showToast('home.toast.medicationNamed', preset.name);
             }}
           />
         ))}
@@ -159,23 +191,23 @@ export default function HomePage() {
           <MedicationTile
             key={preset.key}
             preset={preset}
-            medicationEvents={medicationEvents}
+            medicationEvents={momMedicationEvents}
             onLogged={() => {
               loadMedicationEvents();
-              showToast(`${preset.name} logged`);
+              showToast('home.toast.medicationNamed', preset.name);
             }}
           />
         ))}
         <EventTile
           icon="💊"
-          label="Other"
-          sub="Custom medication"
+          label={t('home.other')}
+          sub={t('home.sub.customMedication')}
           color={EVENT_COLORS.medication}
           onClick={() => setOpenSheet('medication-other')}
         />
         <EventTile
           icon="🌡️"
-          label="Temperature"
+          label={t('events.type.temperature')}
           color={EVENT_COLORS.temperature}
           onClick={() => setOpenSheet('temperature-mom')}
         />
@@ -184,35 +216,46 @@ export default function HomePage() {
       {openSheet === 'diaper' && (
         <DiaperSheet
           onClose={() => setOpenSheet(null)}
-          onSaved={() => closeAndToast('Diaper logged')}
+          onSaved={() => closeAndToast('home.toast.diaper')}
         />
       )}
       {openSheet === 'temperature-baby' && (
         <TemperatureSheet
           who="baby"
           onClose={() => setOpenSheet(null)}
-          onSaved={() => closeAndToast('Temperature logged')}
+          onSaved={() => closeAndToast('home.toast.temperature')}
         />
       )}
       {openSheet === 'temperature-mom' && (
         <TemperatureSheet
           who="mom"
           onClose={() => setOpenSheet(null)}
-          onSaved={() => closeAndToast('Temperature logged')}
+          onSaved={() => closeAndToast('home.toast.temperature')}
         />
       )}
       {openSheet === 'growth' && (
         <GrowthSheet
           onClose={() => setOpenSheet(null)}
-          onSaved={() => closeAndToast('Growth measurement logged')}
+          onSaved={() => closeAndToast('home.toast.growth')}
+        />
+      )}
+      {openSheet === 'medication-other-baby' && (
+        <MedicationSheet
+          who="baby"
+          onClose={() => setOpenSheet(null)}
+          onSaved={() => {
+            loadMedicationEvents();
+            closeAndToast('home.toast.medication');
+          }}
         />
       )}
       {openSheet === 'medication-other' && (
         <MedicationSheet
+          who="mom"
           onClose={() => setOpenSheet(null)}
           onSaved={() => {
             loadMedicationEvents();
-            closeAndToast('Medication logged');
+            closeAndToast('home.toast.medication');
           }}
         />
       )}
@@ -232,7 +275,10 @@ export default function HomePage() {
             zIndex: 30,
           }}
         >
-          {toast}
+          {t(
+            toast.key,
+            toast.medicationName != null ? { name: medicationDisplayName(toast.medicationName) } : undefined
+          )}
         </div>
       )}
     </div>

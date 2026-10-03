@@ -1,28 +1,38 @@
 import { useState } from 'react';
 import { Sheet } from './Sheet.jsx';
-import { api } from '../api/client.js';
+import { api, errorMessage } from '../api/client.js';
+import { t } from '../i18n/index.js';
+import { readNumberField } from '../lib/numberField.js';
 
 export function EditGrowthSheet({ entry, onClose, onSaved, onDeleted }) {
   const [measuredAt, setMeasuredAt] = useState(entry.measuredAt);
-  const [weightKg, setWeightKg] = useState(entry.weightKg ?? '');
-  const [heightCm, setHeightCm] = useState(entry.heightCm ?? '');
-  const [headCm, setHeadCm] = useState(entry.headCircumferenceCm ?? '');
+  // Raw text as typed; parsed on save.
+  const [weightKg, setWeightKg] = useState(String(entry.weightKg ?? ''));
+  const [heightCm, setHeightCm] = useState(String(entry.heightCm ?? ''));
+  const [headCm, setHeadCm] = useState(String(entry.headCircumferenceCm ?? ''));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
   async function save() {
+    const weight = readNumberField(weightKg, { min: 0 });
+    const height = readNumberField(heightCm, { min: 0 });
+    const head = readNumberField(headCm, { min: 0 });
+    if (weight.invalid || height.invalid || head.invalid) {
+      setError(t('sheets.invalidNumber'));
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       await api.updateGrowth(entry.id, {
         measuredAt,
-        weightKg: weightKg === '' ? null : Number(weightKg),
-        heightCm: heightCm === '' ? null : Number(heightCm),
-        headCircumferenceCm: headCm === '' ? null : Number(headCm),
+        weightKg: weight.value,
+        heightCm: height.value,
+        headCircumferenceCm: head.value,
       });
       onSaved();
     } catch (e) {
-      setError(e.message);
+      setError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -39,30 +49,30 @@ export function EditGrowthSheet({ entry, onClose, onSaved, onDeleted }) {
   }
 
   return (
-    <Sheet title="Edit growth measurement" onClose={onClose}>
+    <Sheet title={t('sheets.growth.editTitle')} onClose={onClose}>
       <div className="field">
-        <label>Date</label>
+        <label>{t('sheets.growth.date')}</label>
         <input type="date" value={measuredAt} onChange={(e) => setMeasuredAt(e.target.value)} />
       </div>
       <div className="field">
-        <label>Weight (kg)</label>
-        <input type="number" step="0.01" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} />
+        <label>{t('sheets.growth.weight')}</label>
+        <input type="text" inputMode="decimal" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} />
       </div>
       <div className="field">
-        <label>Height (cm)</label>
-        <input type="number" step="0.1" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} />
+        <label>{t('sheets.growth.height')}</label>
+        <input type="text" inputMode="decimal" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} />
       </div>
       <div className="field">
-        <label>Head circumference (cm)</label>
-        <input type="number" step="0.1" value={headCm} onChange={(e) => setHeadCm(e.target.value)} />
+        <label>{t('sheets.growth.head')}</label>
+        <input type="text" inputMode="decimal" value={headCm} onChange={(e) => setHeadCm(e.target.value)} />
       </div>
       {error && <p className="error-text">{error}</p>}
       <div className="btn-row" style={{ marginTop: 16 }}>
         <button className="btn btn-primary btn-block" disabled={busy} onClick={save}>
-          Save
+          {t('common.save')}
         </button>
         <button className="btn btn-danger btn-block" disabled={busy} onClick={remove}>
-          Delete
+          {t('common.delete')}
         </button>
       </div>
     </Sheet>

@@ -1,39 +1,65 @@
-import { formatDateTime } from './dateUtils.js';
+import { t } from '../i18n/index.js';
+import { formatClock, formatDateTime, formatMinutes } from './dateUtils.js';
 
 // Standard adult dosing intervals from NHS-published sources. Not medical advice —
 // always follow your own prescription or the packet instructions instead if they differ.
+//
+// `name` is the STORED identifier (kept in event details and matched against history) - never
+// translate or change it. `labelKey` is the display name (use medicationDisplayName(name)); the
+// `warning` getters resolve lazily so nothing is translated at import time. Prefer presetWarning().
 export const MEDICATION_PRESETS = [
   // NHS allows 1g every 4-6h (max 4g/24h); 6h is the spacing this household was told to use.
-  { key: 'paracetamol', name: 'Paracetamol', doseAmount: 1, doseUnit: 'g', intervalHours: 6 },
-  { key: 'ibuprofen', name: 'Ibuprofen', doseAmount: 400, doseUnit: 'mg', intervalHours: 6 },
+  { key: 'paracetamol', name: 'Paracetamol', labelKey: 'medication.preset.paracetamol', doseAmount: 1, doseUnit: 'g', intervalHours: 6 },
+  { key: 'ibuprofen', name: 'Ibuprofen', labelKey: 'medication.preset.ibuprofen', doseAmount: 400, doseUnit: 'mg', intervalHours: 6 },
   {
     key: 'diclofenac',
     name: 'Diclofenac',
+    labelKey: 'medication.preset.diclofenac',
     doseAmount: 100,
     doseUnit: 'mg',
     intervalHours: 12,
-    warning:
-      'Max 150mg per 24h. Often only continued short-term after a hospital dose — check with your midwife/GP before repeating at home.',
+    warningKey: 'medication.warning.diclofenac',
+    get warning() {
+      return t(this.warningKey);
+    },
   },
   {
     key: 'dihydrocodeine',
     name: 'Dihydrocodeine',
+    labelKey: 'medication.preset.dihydrocodeine',
     doseAmount: 30,
     doseUnit: 'mg',
     intervalHours: 6,
-    warning:
-      'An opioid — NHS guidance says it can be used short-term while breastfeeding, with caution. Watch baby for unusual sleepiness, feeding difficulty, or breathing changes, and use the lowest effective dose for the shortest time.',
+    warningKey: 'medication.warning.dihydrocodeine',
+    get warning() {
+      return t(this.warningKey);
+    },
   },
   {
     key: 'co-codamol',
     name: 'Co-codamol (codeine)',
+    labelKey: 'medication.preset.coCodamol',
     doseAmount: null,
     doseUnit: null,
     intervalHours: 6,
-    warning:
-      'NHS/MHRA advise AGAINST codeine while breastfeeding — around 3% of people are "ultra-rapid metabolisers" and pass unsafe amounts to their baby through milk, which has caused serious harm in rare cases. If you\'ve been prescribed this, talk to your GP/midwife about dihydrocodeine or paracetamol/ibuprofen instead.',
+    warningKey: 'medication.warning.coCodamol',
+    get warning() {
+      return t(this.warningKey);
+    },
   },
 ];
+
+/** Translated warning text for a preset (null when it has none). */
+export function presetWarning(preset) {
+  return preset?.warningKey ? t(preset.warningKey) : null;
+}
+
+/** Display name of a medication: a built-in preset's English name becomes its translated label;
+ * any other (custom, user-typed) name is returned exactly as stored. */
+export function medicationDisplayName(name) {
+  const preset = MEDICATION_PRESETS.find((p) => p.name === name);
+  return preset ? t(preset.labelKey) : name;
+}
 
 function computeNextSafeAt(startedAt, intervalHours) {
   if (typeof intervalHours !== 'number' || Number.isNaN(intervalHours) || intervalHours < 0) return null;
@@ -42,15 +68,19 @@ function computeNextSafeAt(startedAt, intervalHours) {
 
 /** Cooldown status for a medication name, from its most recent dose (or null if never logged). */
 export function getMedicationStatus(lastDose, now = Date.now()) {
-  if (!lastDose) return { sub: 'Not logged recently', safe: true, nextSafeAt: null };
+  if (!lastDose) return { sub: t('medication.status.none'), safe: true, nextSafeAt: null };
   const nextSafeAt = computeNextSafeAt(lastDose.startedAt, lastDose.details?.intervalHours);
-  if (nextSafeAt == null) return { sub: 'Logged (interval unknown)', safe: true, nextSafeAt: null };
-  if (now >= nextSafeAt) return { sub: 'Safe to take now', safe: true, nextSafeAt };
+  if (nextSafeAt == null) return { sub: t('medication.status.unknownInterval'), safe: true, nextSafeAt: null };
+  if (now >= nextSafeAt) return { sub: t('medication.status.safe'), safe: true, nextSafeAt };
   const remainingMin = Math.ceil((nextSafeAt - now) / 60000);
-  const h = Math.floor(remainingMin / 60);
-  const m = remainingMin % 60;
-  const nextTime = new Date(nextSafeAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  return { sub: `Wait ${h > 0 ? `${h}h ` : ''}${m}m (until ${nextTime})`, safe: false, nextSafeAt };
+  return {
+    sub: t('medication.status.wait', {
+      duration: formatMinutes(remainingMin, { pad: false }),
+      time: formatClock(nextSafeAt),
+    }),
+    safe: false,
+    nextSafeAt,
+  };
 }
 
 /** When a specific logged dose's own next-dose-safe time falls, or null if it has no valid interval. */
@@ -60,14 +90,32 @@ export function nextDoseInfo(event, now = Date.now()) {
   return {
     nextSafeAt,
     safe: now >= nextSafeAt,
-    label: `Next dose safe from ${formatDateTime(new Date(nextSafeAt).toISOString())}`,
+    label: t('medication.nextDose', { when: formatDateTime(new Date(nextSafeAt).toISOString()) }),
   };
 }
 
+/** Who a logged dose belongs to. Doses logged before baby medication existed have no `who`
+ * and were all mum's, so anything that isn't explicitly 'baby' is mum. */
+export function medicationWho(event) {
+  return event.details?.who === 'baby' ? 'baby' : 'mom';
+}
+
+/** Medication events for one person, keeping the input order (newest-first from the API). */
+export function medicationsFor(medicationEvents, who) {
+  return medicationEvents.filter((e) => medicationWho(e) === who);
+}
+
+/** Built-in presets are adult doses for mum; baby medication is entirely user-defined ("Other"). */
+function presetsFor(who) {
+  return who === 'baby' ? [] : MEDICATION_PRESETS;
+}
+
 /** All known medication names: presets first (in preset order), then any extra names seen in
- * logged events, alphabetically. `medicationEvents` order doesn't matter here. */
-export function getMedicationNames(medicationEvents) {
-  const presetNames = MEDICATION_PRESETS.map((p) => p.name);
+ * logged events, alphabetically. `medicationEvents` order doesn't matter here. Pass events
+ * already filtered with medicationsFor(); `who` only decides whether mum's presets apply.
+ * These are STORED names - show them with medicationDisplayName(). */
+export function getMedicationNames(medicationEvents, who = 'mom') {
+  const presetNames = presetsFor(who).map((p) => p.name);
   const seen = new Set(presetNames);
   const extra = [];
   for (const e of medicationEvents) {
@@ -82,9 +130,9 @@ export function getMedicationNames(medicationEvents) {
 }
 
 /** Same ordering as getMedicationNames, filtered down to names with at least one logged dose. */
-export function loggedMedicationNames(medicationEvents) {
+export function loggedMedicationNames(medicationEvents, who = 'mom') {
   const logged = new Set(medicationEvents.map((e) => e.details?.name).filter(Boolean));
-  return getMedicationNames(medicationEvents).filter((n) => logged.has(n));
+  return getMedicationNames(medicationEvents, who).filter((n) => logged.has(n));
 }
 
 /** Most recent event for a given medication name, or null. Relies on medicationEvents being
@@ -97,8 +145,8 @@ export function lastDoseFor(medicationEvents, name) {
  * once, so they can render as their own MedicationTile — defaults taken from the most recent
  * dose of that name. Presets already in MEDICATION_PRESETS are excluded (they have their own
  * fixed entry already). */
-export function getCustomPresets(medicationEvents) {
-  const presetNames = new Set(MEDICATION_PRESETS.map((p) => p.name));
+export function getCustomPresets(medicationEvents, who = 'mom') {
+  const presetNames = new Set(presetsFor(who).map((p) => p.name));
   const seen = new Set();
   const customPresets = [];
   for (const e of medicationEvents) {

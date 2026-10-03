@@ -10,6 +10,8 @@ import {
 } from 'recharts';
 import { getPercentileCurves, PERCENTILE_BANDS } from '../lib/whoPercentiles.js';
 import { useColorScheme } from '../lib/useColorScheme.js';
+import { t, formatNumber } from '../i18n/index.js';
+import { percentileLabel } from '../lib/palette.js';
 import { CHART_CHROME, CHILD_SERIES_COLOR, WHO_BAND_COLORS, resolve } from '../lib/palette.js';
 
 export function GrowthPercentileChart({ title, unit, indicator, sex, childPoints }) {
@@ -37,7 +39,7 @@ export function GrowthPercentileChart({ title, unit, indicator, sex, childPoints
             tick={{ fontSize: 11, fill: muted }}
             axisLine={{ stroke: axis }}
             tickLine={false}
-            label={{ value: 'Age (months)', position: 'insideBottom', offset: -2, fill: muted, fontSize: 11 }}
+            label={{ value: t('chart.growth.ageMonths'), position: 'insideBottom', offset: -2, fill: muted, fontSize: 11 }}
           />
           <YAxis
             tick={{ fontSize: 11, fill: muted }}
@@ -50,14 +52,14 @@ export function GrowthPercentileChart({ title, unit, indicator, sex, childPoints
             contentStyle={{ background: surface, border: `1px solid ${grid}`, borderRadius: 8 }}
             labelStyle={{ color: text }}
             itemStyle={{ color: text }}
-            labelFormatter={(v) => `${v} mo`}
+            labelFormatter={(v) => t('chart.growth.monthsShort', { v: formatNumber(v, { maximumFractionDigits: 1 }) })}
           />
           <Legend wrapperStyle={{ fontSize: 11, color: muted }} />
           {PERCENTILE_BANDS.map((band) => (
             <Line
               key={band.label}
               dataKey={band.label}
-              name={band.label}
+              name={percentileLabel(band.label)}
               stroke={resolve(WHO_BAND_COLORS[band.label], isDark)}
               strokeWidth={band.label === '50th' ? 2 : 1}
               strokeDasharray={band.label === '3rd' || band.label === '97th' ? '4 3' : undefined}
@@ -68,7 +70,7 @@ export function GrowthPercentileChart({ title, unit, indicator, sex, childPoints
           <Line
             data={childPoints}
             dataKey="value"
-            name="Your baby"
+            name={t('chart.growth.yourBaby')}
             stroke={childColor}
             strokeWidth={2.5}
             dot={{ r: 5, fill: childColor, strokeWidth: 0 }}

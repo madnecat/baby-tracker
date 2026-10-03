@@ -2,8 +2,14 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { bootstrapAdditionalHouseholds, bootstrapFirstHousehold, bootstrapListedHouseholds } from './bootstrap.js';
 import {
+  applyMomRoles,
+  bootstrapAdditionalHouseholds,
+  bootstrapFirstHousehold,
+  bootstrapListedHouseholds,
+} from './bootstrap.js';
+import {
+  allHouseholdDbs,
   migrateLegacySingleHouseholdDb,
   purgeExpiredSessionsEverywhere,
   runMigrationsForAllHouseholds,
@@ -16,6 +22,9 @@ import { childRouter } from './routes/child.js';
 import { milestonesRouter } from './routes/milestones.js';
 import { apiTokensRouter } from './routes/apiTokens.js';
 import { settingsRouter } from './routes/settings.js';
+import { notificationsRouter } from './routes/notifications.js';
+import { createMailer, readMailConfig } from './mailer.js';
+import { startReminderScheduler } from './reminders.js';
 import { mountMcp } from './mcp.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -26,8 +35,11 @@ bootstrapFirstHousehold();
 bootstrapAdditionalHouseholds();
 bootstrapListedHouseholds();
 runMigrationsForAllHouseholds(runMigrations);
+applyMomRoles(allHouseholdDbs().map((h) => h.slug));
 purgeExpiredSessionsEverywhere();
 setInterval(purgeExpiredSessionsEverywhere, 24 * 60 * 60 * 1000).unref();
+
+const mailer = createMailer(readMailConfig());
 
 const app = express();
 app.disable('x-powered-by');
@@ -41,6 +53,7 @@ app.use('/api/child', childRouter);
 app.use('/api/milestones', milestonesRouter);
 app.use('/api/tokens', apiTokensRouter);
 app.use('/api/settings', settingsRouter);
+app.use('/api/notifications', notificationsRouter(mailer));
 mountMcp(app);
 
 const webDist = path.join(__dirname, '..', '..', 'web', 'dist');
@@ -52,4 +65,5 @@ app.get('*', (req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`Baby Tracker listening on port ${PORT}`);
+  startReminderScheduler({ getHouseholds: allHouseholdDbs, mailer });
 });
