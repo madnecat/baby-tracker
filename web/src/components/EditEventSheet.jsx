@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Sheet } from './Sheet.jsx';
 import { api } from '../api/client.js';
 import { CONSISTENCY_OPTIONS } from '../lib/diaperOptions.js';
+import { AFTER_FEED, FEED_TAGS } from '../lib/breastfeeding.js';
 
 function toLocalInputValue(iso) {
   if (!iso) return '';
@@ -138,18 +139,82 @@ export function EditEventSheet({ event, onClose, onSaved, onDeleted }) {
       )}
 
       {event.type === 'breastfeeding' && (
-        <div className="choice-row">
-          {['left', 'right', 'both'].map((s) => (
-            <button
-              key={s}
-              type="button"
-              className={`choice-btn${details.side === s ? ' selected' : ''}`}
-              onClick={() => setDetail('side', s)}
-            >
-              {s[0].toUpperCase() + s.slice(1)}
-            </button>
-          ))}
-        </div>
+        <>
+          <div className="choice-row">
+            {['left', 'right', 'both'].map((s) => (
+              <button
+                key={s}
+                type="button"
+                className={`choice-btn${details.side === s ? ' selected' : ''}`}
+                onClick={() =>
+                  setDetails((d) => {
+                    const next = { ...d, side: s };
+                    // The starting side only means something for a feed on both sides.
+                    if (s !== 'both') delete next.firstSide;
+                    return next;
+                  })
+                }
+              >
+                {s[0].toUpperCase() + s.slice(1)}
+              </button>
+            ))}
+          </div>
+          {details.side === 'both' && (
+            <>
+              <label style={{ display: 'block', margin: '12px 0 6px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                Started with
+              </label>
+              <div className="choice-row">
+                {['left', 'right'].map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className={`choice-btn${details.firstSide === s ? ' selected' : ''}`}
+                    onClick={() =>
+                      setDetail('firstSide', details.firstSide === s ? undefined : s)
+                    }
+                  >
+                    {s[0].toUpperCase() + s.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          <label style={{ display: 'block', margin: '12px 0 6px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            How it went
+          </label>
+          <div className="choice-row" style={{ flexWrap: 'wrap' }}>
+            {FEED_TAGS.map((t) => {
+              const tags = Array.isArray(details.tags) ? details.tags : [];
+              const on = tags.includes(t.key);
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  className={`choice-btn${on ? ' selected' : ''}`}
+                  onClick={() => {
+                    const next = on ? tags.filter((k) => k !== t.key) : [...tags, t.key];
+                    setDetail('tags', next.length ? next : undefined);
+                  }}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="choice-row" style={{ marginTop: 8 }}>
+            {AFTER_FEED.map((a) => (
+              <button
+                key={a.key}
+                type="button"
+                className={`choice-btn${details.afterFeed === a.key ? ' selected' : ''}`}
+                onClick={() => setDetail('afterFeed', details.afterFeed === a.key ? undefined : a.key)}
+              >
+                {a.label}
+              </button>
+            ))}
+          </div>
+        </>
       )}
 
       {event.type === 'contraction' && (

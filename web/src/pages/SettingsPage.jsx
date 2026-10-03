@@ -4,6 +4,7 @@ import { api } from '../api/client.js';
 import { ApiTokensSection } from '../components/ApiTokensSection.jsx';
 import { ChildProfileSection } from '../components/ChildProfileSection.jsx';
 import { EmailRemindersSection } from '../components/EmailRemindersSection.jsx';
+import { FeedingSettingsSection } from '../components/FeedingSettingsSection.jsx';
 
 export default function SettingsPage() {
   const { user, logout } = useAuth();
@@ -37,6 +38,8 @@ export default function SettingsPage() {
       </div>
 
       <ChildProfileSection />
+
+      <FeedingSettingsSection />
 
       <EmailRemindersSection />
 

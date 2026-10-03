@@ -7,6 +7,7 @@ import Database from 'better-sqlite3';
 import { runMigrations } from './migrations.js';
 import { collectDueReminders, processHousehold, runReminderTick } from './reminders.js';
 import { reminderEmail } from './emailTemplates.js';
+import { getSettings, setSettings } from './settingsService.js';
 import { PrefsError, createRateLimiter, getPrefs, isValidEmail, savePrefs } from './notificationsService.js';
 
 const schemaSql = fs.readFileSync(
@@ -51,7 +52,7 @@ test('fresh and migrated databases both end up at the latest schema', () => {
   const db = makeDb();
   const cols = db.prepare(`PRAGMA table_info(settings)`).all().map((c) => c.name);
   assert.ok(cols.includes('mom_user_id') && cols.includes('hide_baby_medication'));
-  assert.equal(db.pragma('user_version', { simple: true }), 4);
+  assert.equal(db.pragma('user_version', { simple: true }), 5);
 });
 
 test('nothing is sent while nobody has enabled reminders', () => {
@@ -278,4 +279,39 @@ test('a delivered email whose record fails to save is not retried (no duplicate 
 test('enabled must be a real boolean', () => {
   const db = makeDb();
   assert.throws(() => savePrefs(db, 1, { enabled: 'true', email: 'a@b.co' }), PrefsError);
+});
+
+test('settings: the feed prompt is on by default, and saving one setting keeps the others (and Mum)', () => {
+  const db = makeDb();
+  assert.equal(getSettings(db).feedPrompt, true, 'on before any settings row exists');
+  setMom(db, 2);
+  assert.equal(getSettings(db).feedPrompt, true, 'still on once the row exists');
+
+  setSettings(db, { feedPrompt: false });
+  setSettings(db, { hideContractions: true });
+  assert.deepEqual(getSettings(db), { hideContractions: true, hideBabyMedication: false, feedPrompt: false });
+  assert.equal(db.prepare(`SELECT mom_user_id AS id FROM settings WHERE id = 1`).get().id, 2);
+});
+
+test('migration v5 upgrades a real v4 database without touching its settings', () => {
+  const db = makeDb();
+  setSettings(db, { hideContractions: true });
+  setMom(db, 2);
+  // Rewind to how a v4 database looks: no feed_prompt column, user_version 4.
+  db.exec(`ALTER TABLE settings DROP COLUMN feed_prompt`);
+  db.pragma('user_version = 4');
+
+  runMigrations(db);
+
+  assert.equal(db.pragma('user_version', { simple: true }), 5);
+  const row = db.prepare(`SELECT * FROM settings WHERE id = 1`).get();
+  assert.equal(row.feed_prompt, 1, 'existing rows get the default (on)');
+  assert.equal(row.hide_contractions, 1);
+  assert.equal(row.mom_user_id, 2);
+});
+
+test('settings ignore values that are not real booleans', () => {
+  const db = makeDb();
+  setSettings(db, { feedPrompt: 'false', hideContractions: 1, hideBabyMedication: null });
+  assert.deepEqual(getSettings(db), { hideContractions: false, hideBabyMedication: false, feedPrompt: true });
 });

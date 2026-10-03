@@ -54,7 +54,9 @@ CREATE TABLE IF NOT EXISTS settings (
   hide_contractions INTEGER NOT NULL DEFAULT 0,
   hide_baby_medication INTEGER NOT NULL DEFAULT 0,
   -- Which parent is Mum; set from the add-on configuration on every boot (never from the web UI).
-  mom_user_id INTEGER
+  mom_user_id INTEGER,
+  -- Whether the app asks "How did the feed go?" after a breastfeed is stopped.
+  feed_prompt INTEGER NOT NULL DEFAULT 1
 );
 
 -- Per-parent email reminder preferences. Off by default; enabled_at is when it was last switched

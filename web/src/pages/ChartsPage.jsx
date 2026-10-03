@@ -4,6 +4,7 @@ import { api } from '../api/client.js';
 import { FrequencyChart } from '../components/FrequencyChart.jsx';
 import { GrowthPercentileChart } from '../components/GrowthPercentileChart.jsx';
 import { SleepSection } from '../components/SleepSection.jsx';
+import { FeedInsightsCard } from '../components/FeedInsightsCard.jsx';
 import { EVENT_COLORS, DIAPER_SUBTYPE_COLORS } from '../lib/palette.js';
 import { aggregateByDay } from '../lib/aggregate.js';
 import { sleepStats } from '../lib/sleep.js';
@@ -141,6 +142,7 @@ export default function ChartsPage() {
         data={breastfeedingData}
         series={[{ key: 'minutes', label: 'Minutes', color: EVENT_COLORS.breastfeeding }]}
       />
+      <FeedInsightsCard events={events} />
       <FrequencyChart
         title="Sleep hours / day"
         unitLabel="hrs"

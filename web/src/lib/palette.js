@@ -33,6 +33,17 @@ export const WHO_BAND_COLORS = {
 // The child's own measurement series stands out against the blue bands.
 export const CHILD_SERIES_COLOR = { light: '#eb6834', dark: '#d95926' };
 
+// Breastfeeding-notes card: categorical slots (validated with the dataviz script: CVD-safe, labels
+// + a table twin cover the one light-mode contrast warning on the green). "none" is the neutral
+// de-emphasis gray, "full" the single-hue fill of the after-feed meter.
+export const FEED_NOTE_COLORS = {
+  efficient: { light: '#1baf7a', dark: '#199e70', label: 'Efficient feed' },
+  searching: { light: '#eb6834', dark: '#d95926', label: 'Playing / searching' },
+  other: { light: '#2a78d6', dark: '#3987e5', label: 'Other notes' },
+  none: { light: '#c3c2b7', dark: '#4a4a46', label: 'No notes' },
+  full: { light: '#eda100', dark: '#c98500', label: 'Seemed full' },
+};
+
 export const CHART_CHROME = {
   gridline: { light: '#e1e0d9', dark: '#2c2c2a' },
   axis: { light: '#c3c2b7', dark: '#383835' },

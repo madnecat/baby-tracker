@@ -80,6 +80,16 @@ const MIGRATIONS = [
     },
     log: 'Added settings.mom_user_id for email reminders',
   },
+  {
+    version: 5,
+    run: (db) => {
+      const columns = db.prepare(`PRAGMA table_info(settings)`).all();
+      if (!columns.some((c) => c.name === 'feed_prompt')) {
+        db.exec(`ALTER TABLE settings ADD COLUMN feed_prompt INTEGER NOT NULL DEFAULT 1`);
+      }
+    },
+    log: 'Added settings.feed_prompt',
+  },
 ];
 
 export function runMigrations(db) {

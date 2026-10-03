@@ -5,6 +5,7 @@ import { EditGrowthSheet } from '../components/EditGrowthSheet.jsx';
 import { EVENT_COLORS, resolve as resolveColor } from '../lib/palette.js';
 import { useColorScheme } from '../lib/useColorScheme.js';
 import { dayKey, formatDateTime, formatDuration } from '../lib/dateUtils.js';
+import { describeSides, observationsText } from '../lib/breastfeeding.js';
 import {
   getMedicationStatus,
   lastDoseFor,
@@ -30,7 +31,7 @@ function summarize(item) {
     case 'bottle':
       return `Bottle — ${d.volumeMl ?? '?'} mL (${d.contents ?? '?'})`;
     case 'breastfeeding':
-      return `Breastfeeding — ${d.side ?? '?'} — ${formatDuration(item.startedAt, item.endedAt)}`;
+      return `Breastfeeding — ${describeSides(d)} — ${formatDuration(item.startedAt, item.endedAt)}`;
     case 'outing':
       return `Outing${d.location ? ` — ${d.location}` : ''} — ${formatDuration(item.startedAt, item.endedAt)}`;
     case 'temperature':
@@ -224,6 +225,9 @@ export default function HistoryPage() {
               <div className="details">
                 <div>{summarize(item)}</div>
                 <div className="time">{formatDateTime(item.startedAt)}</div>
+                {item.type === 'breastfeeding' && observationsText(item.details) && (
+                  <div className="time">{observationsText(item.details)}</div>
+                )}
                 {item.type === 'medication' &&
                   lastDoseByName.get(item.details?.name)?.id === item.id &&
                   nextDoseInfo(item) && <div className="time">{nextDoseInfo(item).label}</div>}

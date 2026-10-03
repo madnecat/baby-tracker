@@ -114,22 +114,27 @@ function buildServer(ctx) {
     'log_breastfeeding',
     {
       description:
-        'Log a completed breastfeeding session (use for retroactive/past feeds). side is required — if the user has not said which side, ASK before calling this tool. Do not guess.',
-      inputSchema: z.object({
-        side: z.enum(['left', 'right', 'both']),
-        startedAt: z.string().datetime().describe('ISO 8601 timestamp the feed started'),
-        endedAt: z.string().datetime().describe('ISO 8601 timestamp the feed ended'),
-      }),
+        'Log a completed breastfeeding session (use for retroactive/past feeds). side is required — if the user has not said which side, ASK before calling this tool. Do not guess. When side is "both", firstSide is the side the feed started on (the app uses it to suggest the next side) — ask if the user has not said, and leave it out if they do not know.',
+      inputSchema: z
+        .object({
+          side: z.enum(['left', 'right', 'both']),
+          firstSide: z.enum(['left', 'right']).optional().describe('Only with side "both": which side came first'),
+          startedAt: z.string().datetime().describe('ISO 8601 timestamp the feed started'),
+          endedAt: z.string().datetime().describe('ISO 8601 timestamp the feed ended'),
+        })
+        .refine((v) => v.side === 'both' || v.firstSide === undefined, {
+          message: 'firstSide can only be given when side is "both"',
+        }),
     },
-    async ({ side, startedAt, endedAt }) => {
+    async ({ side, firstSide, startedAt, endedAt }) => {
       const event = createEvent(db, {
         type: 'breastfeeding',
         startedAt,
         endedAt,
-        details: { side },
+        details: firstSide ? { side, firstSide } : { side },
         createdBy: userId,
       });
-      return textResult(`Logged breastfeeding (${side}, id ${event.id}) from ${startedAt} to ${endedAt}.`);
+      return textResult(`Logged breastfeeding (${side}${firstSide ? `, ${firstSide} first` : ''}, id ${event.id}) from ${startedAt} to ${endedAt}.`);
     }
   );
 
