@@ -1,5 +1,10 @@
 export default {
   'chartsPage.title': 'Charts',
+  'chartsPage.tab.sleep': "Sleep",
+  'chartsPage.tab.feeding': "Feeding",
+  'chartsPage.tab.diapers': "Diapers",
+  'chartsPage.tab.growth': "Growth",
+  'chartsPage.growth.noRange': "Growth curves follow the child’s age: they do not depend on the selected period.",
   'chartsPage.range.hours': '{n}h',
   'chartsPage.range.days': '{n}d',
   'chartsPage.diaper.title': 'Diaper changes / day',

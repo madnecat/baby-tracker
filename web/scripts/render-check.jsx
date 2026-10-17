@@ -48,7 +48,7 @@ for (const name of names) {
   console.log(`\n=== ${name} — ${scenario.summary}`);
   for (const [label, element] of [
     ['CARD  ', <NextSleepCard events={events} child={child} loading={false} />],
-    ['CHARTS', <SleepSection events={events} child={child} />],
+    ['CHARTS', <SleepSection events={events} child={child} rangeDays={7} />],
   ]) {
     try {
       console.log(`${label}: ${asText(renderToStaticMarkup(element))}`);

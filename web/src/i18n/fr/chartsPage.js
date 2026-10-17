@@ -1,5 +1,10 @@
 export default {
   'chartsPage.title': 'Graphiques',
+  'chartsPage.tab.sleep': "Sommeil",
+  'chartsPage.tab.feeding': "Repas",
+  'chartsPage.tab.diapers': "Couches",
+  'chartsPage.tab.growth': "Croissance",
+  'chartsPage.growth.noRange': "Les courbes de croissance suivent l’âge de l’enfant : elles ne dépendent pas de la période choisie.",
   'chartsPage.range.hours': '{n} h',
   'chartsPage.range.days': '{n} j',
   'chartsPage.diaper.title': 'Changes de couche / jour',

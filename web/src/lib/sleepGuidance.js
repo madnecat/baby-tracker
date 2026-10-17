@@ -9,7 +9,14 @@
  * Sources:
  * - Wake windows by age: Cleveland Clinic, "Wake Windows by Age"
  *   https://health.clevelandclinic.org/wake-windows-by-age
+ *   No study validating specific minutes per age was found (searched Oct 2026): this is a field
+ *   practice, used here only as a prior that the child's own data replaces (see sleep.js).
  * - Total sleep per 24h: AASM/AAP consensus (4-12 months: 12-16h) and the NSF ranges either side.
+ *   Under 4 months the NSF "recommended" range is 14-17h, but its wider "may be appropriate" range
+ *   starts lower, and those figures describe time in bed rather than logged sleep. Galland et al.,
+ *   Sleep Med Rev 16:213-222, 2012 (meta-analysis of 34 studies) put the 0-2 month mean at 14.6h
+ *   with a 9.3-20.0h reference interval. The app keeps the 14h floor on purpose: "below the usual
+ *   range" reads as a nudge to help her sleep a little more, which the parents find useful.
  * - Night-sleep consolidation over the first year, and the decline of napping: Iglowstein, Jenni,
  *   Molinari & Largo, "Sleep Duration From Infancy to Adolescence: Reference Values and
  *   Generational Trends", Pediatrics 111(2):302-307, 2003 (Zurich Longitudinal Studies, n=493).
@@ -31,13 +38,48 @@ export const WAKE_WINDOWS_BY_AGE = [
   { maxWeeks: Infinity, min: 300, max: 420 },
 ];
 
-/** Total sleep per 24h, in hours, by age. `maxMonths` is exclusive. */
+/**
+ * Total sleep per 24h, in hours, by age. `maxMonths` is exclusive.
+ */
 export const TOTAL_SLEEP_BY_AGE = [
   { maxMonths: 4, min: 14, max: 17 },
   { maxMonths: 12, min: 12, max: 16 },
   { maxMonths: 24, min: 11, max: 14 },
   { maxMonths: Infinity, min: 10, max: 13 },
 ];
+
+/**
+ * Typical length of the longest unbroken night stretch, in minutes, by age in weeks.
+ *
+ * APPROXIMATE. Galland et al. 2012 give a mean of 5.7h (reference interval 1.8-9.6h) for 0-5
+ * months pooled and 8.3h (3.0-13.7h) for 6-24 months, plus a slope of about +39 min per month from
+ * 1 to 6 months. Nobody publishes this per single week of age, so the anchors are interpolated from
+ * those figures, from Henderson et al. 2010 (Pediatrics 126:e1081) and from the NHS ("5-8h for some
+ * babies at 3-6 months, not all"). Read them as a plausible band, not percentiles: the spread
+ * between babies is very large before 3 months. Parent-reported figures also run longer than logged
+ * ones, since a parent does not see the wakes where the baby resettles alone.
+ */
+export const LONGEST_NIGHT_STRETCH_BY_AGE = [
+  { weeks: 6, lo: 150, hi: 300 },
+  { weeks: 8, lo: 180, hi: 360 },
+  { weeks: 10, lo: 180, hi: 420 },
+  { weeks: 12, lo: 240, hi: 480 },
+  { weeks: 16, lo: 240, hi: 540 },
+  { weeks: 26, lo: 300, hi: 600 },
+];
+
+/** Plausible band (minutes) for the longest night stretch at an age in weeks; null outside 4-52 weeks. */
+export function longestNightStretchTypical(ageWeeks) {
+  if (ageWeeks == null || ageWeeks < 4 || ageWeeks > 52) return null;
+  const rows = LONGEST_NIGHT_STRETCH_BY_AGE;
+  if (ageWeeks <= rows[0].weeks) return { lo: rows[0].lo, hi: rows[0].hi };
+  if (ageWeeks >= rows.at(-1).weeks) return { lo: rows.at(-1).lo, hi: rows.at(-1).hi };
+  const i = rows.findIndex((r) => ageWeeks < r.weeks);
+  const a = rows[i - 1];
+  const b = rows[i];
+  const f = (ageWeeks - a.weeks) / (b.weeks - a.weeks);
+  return { lo: Math.round(a.lo + f * (b.lo - a.lo)), hi: Math.round(a.hi + f * (b.hi - a.hi)) };
+}
 
 /** Age-appropriate wake window (minutes) for a given age in weeks. */
 export function wakeWindowBaseline(ageWeeks) {

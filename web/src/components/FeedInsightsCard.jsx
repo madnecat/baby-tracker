@@ -4,7 +4,6 @@ import { t } from '../i18n/index.js';
 import { FEED_NOTE_COLORS, resolve } from '../lib/palette.js';
 import { useColorScheme } from '../lib/useColorScheme.js';
 
-const DAYS = 14;
 const MIN_ANSWERED = 3; // fewer after-feed answers than this isn't a meaningful share
 const MIN_FOR_TYPICAL = 2; // a single feed isn't a "typical" length
 const ORDER = ['efficient', 'searching', 'other', 'none'];
@@ -20,9 +19,9 @@ const secondary = { color: 'var(--text-secondary)' };
  * legend that carries the exact numbers, and a small meter for how often baby seemed full.
  * Descriptive only — it reports what was noted, never a verdict on the baby or the feeding.
  */
-export function FeedInsightsCard({ events }) {
+export function FeedInsightsCard({ events, days = 14 }) {
   const isDark = useColorScheme();
-  const insights = useMemo(() => feedInsights(events, Date.now(), DAYS), [events]);
+  const insights = useMemo(() => feedInsights(events, Date.now(), days), [events, days]);
   if (!insights) return null;
 
   const { mix, totalCount, afterFeed } = insights;
@@ -32,7 +31,7 @@ export function FeedInsightsCard({ events }) {
 
   return (
     <div className="chart-card">
-      <h3>{t('chart.feedInsights.title', { count: DAYS })}</h3>
+      <h3>{t('chart.feedInsights.title', { count: days })}</h3>
       <p style={{ margin: '0 0 10px', fontSize: '0.85rem', ...secondary }}>
         {t('chart.feedInsights.summary', { feeds: feedsText(totalCount), observed: insights.observedCount })}
       </p>

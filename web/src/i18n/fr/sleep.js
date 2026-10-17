@@ -69,7 +69,23 @@ export default {
   'sleep.windowUnlogged': '{duration} : un sommeil semble ne pas avoir été enregistré',
   'sleep.awakeRange': 'Éveil de {from} à {to}',
   'sleep.tapHint': 'Touchez un bloc de sommeil pour voir ses horaires.',
+  'sleep.timeline': "Chronologie du sommeil",
+  'sleep.showAllWindows': "Afficher les {count}",
+  'sleep.showFewerWindows': "Réduire",
   'sleep.range': '{from} → {to}',
   'sleep.now': 'maintenant',
   'sleep.timeRange': '{from}–{to}',
+
+  'sleep.progress.title': 'Progression des nuits',
+  'sleep.progress.hint':
+    'Plus long tronçon de sommeil sans pause d’au moins 10 minutes, nuit par nuit (19 h – 7 h).',
+  'sleep.progress.series': 'Plus long tronçon',
+  'sleep.progress.trendSeries': 'Tendance',
+  'sleep.progress.notEnough': 'Pas encore assez de nuits enregistrées pour dégager une tendance ({count}/{needed}).',
+  'sleep.progress.typical':
+    'Fourchette indicative à cet âge : {min}–{max}. Approximative, et très variable d’un bébé à l’autre.',
+  'sleep.progress.trendUp': 'Le plus long tronçon gagne environ {minutes} min par semaine.',
+  'sleep.progress.trendDown': 'Le plus long tronçon perd environ {minutes} min par semaine.',
+  'sleep.progress.trendFlat': 'Le plus long tronçon est stable.',
+  'sleep.progress.trendUnclear': 'Tendance encore incertaine : les nuits varient beaucoup.',
 };
