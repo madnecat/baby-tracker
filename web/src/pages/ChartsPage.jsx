@@ -3,6 +3,7 @@ import { api } from '../api/client.js';
 import { FrequencyChart } from '../components/FrequencyChart.jsx';
 import { GrowthPercentileChart } from '../components/GrowthPercentileChart.jsx';
 import { SleepSection } from '../components/SleepSection.jsx';
+import { NightProgressCard } from '../components/NightProgressCard.jsx';
 import { FeedInsightsCard } from '../components/FeedInsightsCard.jsx';
 import { EVENT_COLORS, DIAPER_SUBTYPE_COLORS } from '../lib/palette.js';
 import { aggregateByDay } from '../lib/aggregate.js';
@@ -18,11 +19,19 @@ const RANGES = [
   { labelKey: 'chartsPage.range.days', n: 90, days: 90 },
 ];
 
+const TABS = [
+  { id: 'sleep', labelKey: 'chartsPage.tab.sleep', usesRange: true },
+  { id: 'feeding', labelKey: 'chartsPage.tab.feeding', usesRange: true },
+  { id: 'diapers', labelKey: 'chartsPage.tab.diapers', usesRange: true },
+  { id: 'growth', labelKey: 'chartsPage.tab.growth', usesRange: false },
+];
+
 export default function ChartsPage() {
   const [events, setEvents] = useState([]);
   const [growth, setGrowth] = useState([]);
   const [child, setChild] = useState(null);
   const [rangeDays, setRangeDays] = useState(30);
+  const [tab, setTab] = useState('sleep');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -111,76 +120,110 @@ export default function ChartsPage() {
     <div>
       <h1 className="page-title">{t('chartsPage.title')}</h1>
 
-      <div className="range-tabs">
-        {RANGES.map((r) => (
+      <div className="sub-tabs" role="tablist">
+        {TABS.map((tabDef) => (
           <button
-            key={r.days}
-            className={rangeDays === r.days ? 'active' : ''}
-            onClick={() => setRangeDays(r.days)}
+            key={tabDef.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === tabDef.id}
+            className={tab === tabDef.id ? 'active' : ''}
+            onClick={() => setTab(tabDef.id)}
           >
-            {t(r.labelKey, { n: r.n })}
+            {t(tabDef.labelKey)}
           </button>
         ))}
       </div>
 
-      <FrequencyChart
-        title={t('chartsPage.diaper.title')}
-        data={diaperData}
-        series={[
-          { key: 'wet', label: t('chartsPage.diaper.wet'), color: DIAPER_SUBTYPE_COLORS.wet },
-          { key: 'dirty', label: t('chartsPage.diaper.dirty'), color: DIAPER_SUBTYPE_COLORS.dirty },
-        ]}
-      />
-      <FrequencyChart
-        title={t('chartsPage.bottle.title')}
-        unitLabel={t('chartsPage.unit.ml')}
-        data={bottleData}
-        series={[{ key: 'volumeMl', label: t('chartsPage.bottle.series'), color: EVENT_COLORS.bottle }]}
-      />
-      <FrequencyChart
-        title={t('chartsPage.breastfeeding.title')}
-        unitLabel={t('chartsPage.unit.min')}
-        data={breastfeedingData}
-        series={[{ key: 'minutes', label: t('chartsPage.breastfeeding.series'), color: EVENT_COLORS.breastfeeding }]}
-      />
-      <FeedInsightsCard events={events} />
-      <FrequencyChart
-        title={t('chartsPage.sleep.title')}
-        unitLabel={t('chartsPage.unit.hours')}
-        data={sleepData}
-        series={[{ key: 'hours', label: t('chartsPage.sleep.series'), color: EVENT_COLORS.sleep }]}
-      />
-
-      <SleepSection events={events} child={child} />
-
-      <h2 className="section-title">{t('chartsPage.who.title')}</h2>
-      {!child ? (
-        <div className="empty-state">
-          {t('chartsPage.who.noChild')}
+      {/* Every chart on the tabs that use it follows this one filter; the growth curves are by age. */}
+      {TABS.find((x) => x.id === tab).usesRange && (
+        <div className="range-tabs">
+          {RANGES.map((r) => (
+            <button
+              key={r.days}
+              className={rangeDays === r.days ? 'active' : ''}
+              onClick={() => setRangeDays(r.days)}
+            >
+              {t(r.labelKey, { n: r.n })}
+            </button>
+          ))}
         </div>
-      ) : (
+      )}
+
+      {tab === 'sleep' && (
+        <SleepSection events={events} child={child} rangeDays={rangeDays}>
+          <FrequencyChart
+            title={t('chartsPage.sleep.title')}
+            unitLabel={t('chartsPage.unit.hours')}
+            data={sleepData}
+            series={[{ key: 'hours', label: t('chartsPage.sleep.series'), color: EVENT_COLORS.sleep }]}
+          />
+          <NightProgressCard events={events} child={child} days={rangeDays} />
+        </SleepSection>
+      )}
+
+      {tab === 'feeding' && (
         <>
-          <GrowthPercentileChart
-            title={t('chartsPage.who.weight')}
-            unit={t('chartsPage.unit.kg')}
-            indicator="weight"
-            sex={child.sex}
-            childPoints={growthPoints.weight}
+          <FrequencyChart
+            title={t('chartsPage.bottle.title')}
+            unitLabel={t('chartsPage.unit.ml')}
+            data={bottleData}
+            series={[{ key: 'volumeMl', label: t('chartsPage.bottle.series'), color: EVENT_COLORS.bottle }]}
           />
-          <GrowthPercentileChart
-            title={t('chartsPage.who.height')}
-            unit={t('chartsPage.unit.cm')}
-            indicator="height"
-            sex={child.sex}
-            childPoints={growthPoints.height}
+          <FrequencyChart
+            title={t('chartsPage.breastfeeding.title')}
+            unitLabel={t('chartsPage.unit.min')}
+            data={breastfeedingData}
+            series={[{ key: 'minutes', label: t('chartsPage.breastfeeding.series'), color: EVENT_COLORS.breastfeeding }]}
           />
-          <GrowthPercentileChart
-            title={t('chartsPage.who.head')}
-            unit={t('chartsPage.unit.cm')}
-            indicator="headCircumference"
-            sex={child.sex}
-            childPoints={growthPoints.headCircumference}
-          />
+          <FeedInsightsCard events={events} days={rangeDays} />
+        </>
+      )}
+
+      {tab === 'diapers' && (
+        <FrequencyChart
+          title={t('chartsPage.diaper.title')}
+          data={diaperData}
+          series={[
+            { key: 'wet', label: t('chartsPage.diaper.wet'), color: DIAPER_SUBTYPE_COLORS.wet },
+            { key: 'dirty', label: t('chartsPage.diaper.dirty'), color: DIAPER_SUBTYPE_COLORS.dirty },
+          ]}
+        />
+      )}
+
+      {tab === 'growth' && (
+        <>
+          <h2 className="section-title">{t('chartsPage.who.title')}</h2>
+          <p style={{ margin: '0 0 12px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+            {t('chartsPage.growth.noRange')}
+          </p>
+          {!child ? (
+            <div className="empty-state">{t('chartsPage.who.noChild')}</div>
+          ) : (
+            <>
+              <GrowthPercentileChart
+                title={t('chartsPage.who.weight')}
+                unit={t('chartsPage.unit.kg')}
+                indicator="weight"
+                sex={child.sex}
+                childPoints={growthPoints.weight}
+              />
+              <GrowthPercentileChart
+                title={t('chartsPage.who.height')}
+                unit={t('chartsPage.unit.cm')}
+                indicator="height"
+                sex={child.sex}
+                childPoints={growthPoints.height}
+              />
+              <GrowthPercentileChart
+                title={t('chartsPage.who.head')}
+                unit={t('chartsPage.unit.cm')}
+                indicator="headCircumference"
+                sex={child.sex}
+                childPoints={growthPoints.headCircumference}
+              />
+            </>
+          )}
         </>
       )}
     </div>

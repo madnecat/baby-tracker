@@ -628,7 +628,11 @@ test('legacy medication rows without `who` are still mum\'s, and custom names st
 
 // ===================================================================== sleep maths untouched
 
-test('sleep.js / sleepGuidance.js / sleepBand.js are byte-identical to pre-i18n commit ab16004', (t) => {
+// sleepGuidance.js is deliberately NOT in this list any more: it gained a new night-stretch band
+// and source comments after the i18n migration (sources in the file). What drives predictions in it
+// (the wake-window table, the total-sleep midpoints, the tunables) is pinned value by value in
+// sleepProgress.test.js instead, so a change there still fails a test.
+test('sleep.js / sleepBand.js are byte-identical to pre-i18n commit ab16004', (t) => {
   const repoRoot = path.join(here, '..', '..', '..');
   let gitOk = true;
   try {
@@ -640,7 +644,7 @@ test('sleep.js / sleepGuidance.js / sleepBand.js are byte-identical to pre-i18n 
     t.skip('git or commit ab16004 not available');
     return;
   }
-  for (const file of ['sleep.js', 'sleepGuidance.js', 'sleepBand.js']) {
+  for (const file of ['sleep.js', 'sleepBand.js']) {
     const old = execFileSync('git', ['show', `ab16004:web/src/lib/${file}`], { cwd: repoRoot, maxBuffer: 20 * 1024 * 1024 });
     const cur = fs.readFileSync(path.join(here, file));
     // compare ignoring CRLF/LF differences introduced by checkout settings

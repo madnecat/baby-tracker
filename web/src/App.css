@@ -441,6 +441,43 @@ textarea {
   border-radius: 50%;
 }
 
+.sub-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sub-tabs button {
+  flex: 1;
+  padding: 10px 4px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+  color: var(--text-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.sub-tabs button.active {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+.link-button {
+  display: block;
+  margin: 8px auto 4px;
+  padding: 6px 10px;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
 .range-tabs {
   display: flex;
   gap: 8px;
