@@ -9,15 +9,19 @@ import { EVENT_COLORS, DIAPER_SUBTYPE_COLORS } from '../lib/palette.js';
 import { aggregateByDay } from '../lib/aggregate.js';
 import { sleepStats } from '../lib/sleep.js';
 import { ageInMonths, formatDayShort } from '../lib/dateUtils.js';
+import { loadRangeDays, saveRangeDays } from '../lib/chartsRange.js';
 import { t } from '../i18n/index.js';
 
 // Labels are catalog keys (with the number as a placeholder), resolved when rendered.
 const RANGES = [
+  { labelKey: 'chartsPage.range.hours', n: 24, days: 1 },
   { labelKey: 'chartsPage.range.hours', n: 48, days: 2 },
   { labelKey: 'chartsPage.range.days', n: 7, days: 7 },
   { labelKey: 'chartsPage.range.days', n: 30, days: 30 },
   { labelKey: 'chartsPage.range.days', n: 90, days: 90 },
 ];
+
+const DEFAULT_RANGE_DAYS = 7;
 
 const TABS = [
   { id: 'sleep', labelKey: 'chartsPage.tab.sleep', usesRange: true },
@@ -30,7 +34,12 @@ export default function ChartsPage() {
   const [events, setEvents] = useState([]);
   const [growth, setGrowth] = useState([]);
   const [child, setChild] = useState(null);
-  const [rangeDays, setRangeDays] = useState(30);
+  const [rangeDays, setRangeDays] = useState(() =>
+    loadRangeDays(
+      RANGES.map((r) => r.days),
+      DEFAULT_RANGE_DAYS
+    )
+  );
   const [tab, setTab] = useState('sleep');
   const [loading, setLoading] = useState(true);
 
@@ -43,6 +52,11 @@ export default function ChartsPage() {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  function chooseRange(days) {
+    setRangeDays(days);
+    saveRangeDays(days);
+  }
 
   const diaperData = useMemo(
     () =>
@@ -142,7 +156,7 @@ export default function ChartsPage() {
             <button
               key={r.days}
               className={rangeDays === r.days ? 'active' : ''}
-              onClick={() => setRangeDays(r.days)}
+              onClick={() => chooseRange(r.days)}
             >
               {t(r.labelKey, { n: r.n })}
             </button>

@@ -10,14 +10,21 @@ const DAY = 24 * HOUR;
 const NOW = new Date(2026, 5, 20, 15, 30).getTime(); // mid-June: no DST change nearby
 
 describe('timelineRows', () => {
-  it('draws one rolling band for 24 and 48 hours', () => {
-    for (const days of [1, 2]) {
-      const rows = timelineRows(NOW, days);
-      assert.equal(rows.length, 1);
-      assert.equal(rows[0].from, NOW - days * DAY);
-      assert.equal(rows[0].to, NOW);
-      assert.equal(rows[0].span, days * DAY);
-    }
+  it('draws one rolling band for 24 hours', () => {
+    const rows = timelineRows(NOW, 1);
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].from, NOW - DAY);
+    assert.equal(rows[0].to, NOW);
+    assert.equal(rows[0].span, DAY);
+  });
+
+  it('draws two rows for 48 hours: yesterday, then today up to now', () => {
+    const rows = timelineRows(NOW, 2);
+    assert.equal(rows.length, 2);
+    assert.equal(rows[0].from, new Date(2026, 5, 19).getTime());
+    assert.equal(rows[0].to, new Date(2026, 5, 20).getTime());
+    assert.equal(rows[1].from, new Date(2026, 5, 20).getTime());
+    assert.equal(rows[1].to, NOW);
   });
 
   it('draws one row per local day beyond that, oldest first, today cut at now', () => {
