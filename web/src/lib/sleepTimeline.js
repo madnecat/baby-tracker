@@ -2,10 +2,10 @@
  * Geometry for the sleep timeline on the Charts page, which follows the range selected at the top.
  * Pure functions, no React: `now` is always a parameter.
  *
- * - Up to two days: one continuous band ending now, so "the last 48 hours" is exactly that and a
- *   night is never cut in two.
- * - Longer: one band per local calendar day, oldest first, so a week or a month reads as a grid
- *   (the usual layout of baby trackers). A night that crosses midnight is drawn in two rows.
+ * - 24 hours: one continuous band ending now, so a night is never cut in two.
+ * - Two days or more: one band per local calendar day, oldest first (yesterday and today for
+ *   "48 h"), so a week or a month reads as a grid (the usual layout of baby trackers). A night
+ *   that crosses midnight is drawn in two rows.
  *
  * sleepBand.js's `blockAt` assumes a 24-hour band, so the hit test for other spans lives here.
  */
@@ -17,7 +17,7 @@ const HOUR_MS = 3600000;
 
 /** Rows to draw: [{ from, to, span, day }]; `day` is the local midnight, null for a rolling band. */
 export function timelineRows(now, days) {
-  if (days <= 2) return [{ from: now - days * DAY_MS, to: now, span: days * DAY_MS, day: null }];
+  if (days <= 1) return [{ from: now - days * DAY_MS, to: now, span: days * DAY_MS, day: null }];
   const rows = [];
   for (let i = days - 1; i >= 0; i -= 1) {
     const d = new Date(now);

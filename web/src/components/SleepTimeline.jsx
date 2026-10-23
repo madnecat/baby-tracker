@@ -6,7 +6,7 @@ import { t } from '../i18n/index.js';
 
 // A band is one row of sleep blocks over an awake ground. Row height shrinks as the range grows so
 // 90 days stay a glanceable grid rather than a very long scroll.
-const rowHeight = (days) => (days <= 2 ? 40 : days <= 7 ? 22 : days <= 30 ? 12 : 7);
+const rowHeight = (days) => (days <= 1 ? 40 : days <= 2 ? 30 : days <= 7 ? 22 : days <= 30 ? 12 : 7);
 
 function Band({ row, blocks, color, height, selected, onSelect }) {
   const { from, span } = row;
@@ -73,7 +73,7 @@ function Ticks({ from, span, stepHours }) {
 }
 
 /**
- * Sleep blocks over the selected range: a single rolling band up to 48 h, a grid of days beyond.
+ * Sleep blocks over the selected range: a single rolling band for 24 h, one row per day beyond.
  *
  * Deliberately not a recharts chart: the useful thing is the *shape* of the day — where the long
  * stretch sat, how chopped up the rest was — and a plain proportional band reads that at a glance
@@ -87,7 +87,7 @@ export function SleepTimeline({ intervals, now, color, days }) {
   const rows = useMemo(() => timelineRows(now, days), [now, days]);
   const rowBlocks = useMemo(() => rows.map((r) => sleepBlocks(intervals, r.from, r.to)), [rows, intervals]);
   const height = rowHeight(days);
-  const grid = days > 2;
+  const grid = days > 1;
   const chosen = selected ? rowBlocks[selected.row]?.[selected.index] : null;
 
   const select = (row) => (index) =>
@@ -140,7 +140,7 @@ export function SleepTimeline({ intervals, now, color, days }) {
             selected={selected?.row === 0 ? selected.index : null}
             onSelect={select(0)}
           />
-          <Ticks from={rows[0].from} span={rows[0].span} stepHours={days === 1 ? 6 : 12} />
+          <Ticks from={rows[0].from} span={rows[0].span} stepHours={6} />
         </>
       )}
       <div

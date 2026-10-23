@@ -22,7 +22,8 @@ PI_SSH="ssh -i <key> -p <port> -o BatchMode=yes root@<host>"
 
 substituting the values from that file. Every command below uses `$PI_SSH`.
 
-- Add-on files live at `/addons/baby-tracker/` on the Pi (Supervisor
+- Add-on files live at `/local_apps/baby-tracker/` on the Pi (older Home Assistant versions
+  called this `/addons`; check with `ls /` if the path is missing) (Supervisor
   auto-detects local add-ons there — no git repo involved)
 - Supervisor CLI is `ha` (aliases: `apps`/`addons` are interchangeable):
   `ha store reload`, `ha apps update local_baby_tracker`, `ha apps logs local_baby_tracker`,
@@ -39,9 +40,9 @@ substituting the values from that file. Every command below uses `$PI_SSH`.
 4. **Sync files to the Pi.** Stage a clean copy, then swap it in — do NOT
    extract over the live directory:
    ```sh
-   $PI_SSH "rm -rf /addons/baby-tracker.new && mkdir -p /addons/baby-tracker.new"
-   cd /c/Users/tom_t/baby-tracker && tar --exclude='node_modules' --exclude='dist' --exclude='data-dev'      -cf - Dockerfile config.yaml .dockerignore README.md server web |      $PI_SSH "tar -xf - -C /addons/baby-tracker.new"
-   $PI_SSH "rm -rf /addons/baby-tracker.old &&      mv /addons/baby-tracker /addons/baby-tracker.old &&      mv /addons/baby-tracker.new /addons/baby-tracker &&      rm -rf /addons/baby-tracker.old"
+   $PI_SSH "rm -rf /local_apps/baby-tracker.new && mkdir -p /local_apps/baby-tracker.new"
+   cd /c/Users/tom_t/baby-tracker && tar --exclude='node_modules' --exclude='dist' --exclude='data-dev'      -cf - Dockerfile config.yaml .dockerignore README.md translations server web |      $PI_SSH "tar -xf - -C /local_apps/baby-tracker.new"
+   $PI_SSH "rm -rf /local_apps/baby-tracker.old &&      mv /local_apps/baby-tracker /local_apps/baby-tracker.old &&      mv /local_apps/baby-tracker.new /local_apps/baby-tracker &&      rm -rf /local_apps/baby-tracker.old"
    ```
    Two things this fixes, both learned the hard way:
 
@@ -56,7 +57,7 @@ substituting the values from that file. Every command below uses `$PI_SSH`.
      again. `.dockerignore` still governs the Docker build context, but keeping
      junk off the Pi in the first place is the better guarantee.
 
-   The database is NOT in `/addons` — it lives in `/data`, a Supervisor-managed
+   The database is NOT in `/local_apps` — it lives in `/data`, a Supervisor-managed
    volume — so swapping the source directory cannot touch anyone's data.
 5. **Reload + update**:
    ```sh
@@ -228,7 +229,7 @@ bugs before.
 Check what the Pi actually runs *before* syncing:
 
 ```sh
-$PI_SSH "head -2 /addons/baby-tracker/config.yaml; ha apps info local_baby_tracker | grep -E '^version'"
+$PI_SSH "head -2 /local_apps/baby-tracker/config.yaml; ha apps info local_baby_tracker | grep -E '^version'"
 ```
 
 If the Pi's version is ahead of, or equal to, the repo's, stop and find out why
