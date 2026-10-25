@@ -1,4 +1,5 @@
 import { reminderEmail } from './emailTemplates.js';
+import { processFreezerHousehold } from './freezerAlerts.js';
 
 // A reminder is only sent while its dose became due within this window; anything older is skipped
 // (the status is still visible in the app). It also bounds the damage of a long downtime or a
@@ -167,6 +168,11 @@ export async function runReminderTick({ getHouseholds, mailer, publicUrl, retrie
       await processHousehold({ slug, db, mailer, publicUrl, nowMs, retries, log });
     } catch (e) {
       log.error(`Reminder check failed for household "${slug}": ${e.message}`);
+    }
+    try {
+      await processFreezerHousehold({ slug, db, mailer, publicUrl, now: new Date(nowMs), log });
+    } catch (e) {
+      log.error(`Freezer check failed for household "${slug}": ${e.message}`);
     }
   }
   for (const [key, retry] of retries) {

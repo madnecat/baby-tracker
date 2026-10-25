@@ -7,6 +7,7 @@ import { MedicationTile } from '../components/MedicationTile.jsx';
 import { DiaperSheet } from '../components/DiaperSheet.jsx';
 import { TemperatureSheet } from '../components/TemperatureSheet.jsx';
 import { MedicationSheet } from '../components/MedicationSheet.jsx';
+import { FreezeBagSheet } from '../components/FreezeBagSheet.jsx';
 import { NextSleepCard } from '../components/NextSleepCard.jsx';
 import { GrowthSheet } from '../components/GrowthSheet.jsx';
 import { api } from '../api/client.js';
@@ -211,6 +212,12 @@ export default function HomePage() {
           color={EVENT_COLORS.temperature}
           onClick={() => setOpenSheet('temperature-mom')}
         />
+        <EventTile
+          icon="🧊"
+          label={t('freezer.tile.label')}
+          sub={t('freezer.tile.sub')}
+          onClick={() => setOpenSheet('freeze-bag')}
+        />
       </div>
 
       {openSheet === 'diaper' && (
@@ -233,6 +240,7 @@ export default function HomePage() {
           onSaved={() => closeAndToast('home.toast.temperature')}
         />
       )}
+      {openSheet === 'freeze-bag' && <FreezeBagSheet onClose={() => setOpenSheet(null)} />}
       {openSheet === 'growth' && (
         <GrowthSheet
           onClose={() => setOpenSheet(null)}

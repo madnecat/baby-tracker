@@ -23,6 +23,7 @@ import { milestonesRouter } from './routes/milestones.js';
 import { apiTokensRouter } from './routes/apiTokens.js';
 import { settingsRouter } from './routes/settings.js';
 import { notificationsRouter } from './routes/notifications.js';
+import { freezerRouter } from './routes/freezer.js';
 import { createMailer, readMailConfig } from './mailer.js';
 import { startReminderScheduler } from './reminders.js';
 import { mountMcp } from './mcp.js';
@@ -54,6 +55,7 @@ app.use('/api/milestones', milestonesRouter);
 app.use('/api/tokens', apiTokensRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/notifications', notificationsRouter(mailer));
+app.use('/api/freezer', freezerRouter);
 mountMcp(app);
 
 const webDist = path.join(__dirname, '..', '..', 'web', 'dist');

@@ -32,4 +32,18 @@ export default {
   'errors.MOM_ALREADY_SET': 'Maman est déjà configurée pour ce foyer.',
   'errors.ADMIN_REQUEST_ALREADY_SENT': "Une demande a déjà été envoyée aujourd’hui.",
   'errors.ADMIN_REQUEST_FAILED': "La demande n’a pas pu être envoyée.",
+
+  'errors.FREEZER_BAG_NOT_FOUND': "Cette poche n’existe plus.",
+  'errors.FREEZER_QUANTITY_INVALID': 'Saisissez la quantité en millilitres entiers (de 1 à 500).',
+  'errors.FREEZER_DATE_INVALID': "Cette date n’est pas valide, ou la péremption est avant la congélation.",
+  'errors.FREEZER_REFERENCE_INVALID': 'Le numéro de la poche doit être un entier supérieur à 0, pas trop éloigné du plus grand numéro déjà utilisé.',
+  'errors.FREEZER_EXPIRY_PAST': 'La date limite d’utilisation est déjà passée : cette poche ne serait pas utilisable.',
+  'errors.FREEZER_REFERENCE_TAKEN': 'Ce numéro a déjà été utilisé pour une autre poche.',
+  'errors.FREEZER_NOTES_INVALID': 'La note est trop longue (200 caractères au maximum).',
+  'errors.FREEZER_BAG_NOT_FROZEN': "Cette poche n’est plus au congélateur.",
+  'errors.FREEZER_TARGET_INVALID': 'Saisissez la taille du biberon en millilitres entiers.',
+  'errors.FREEZER_BAG_IDS_INVALID': 'Choisissez au moins une poche.',
+  'errors.FREEZER_BAG_CONFLICT': "Certaines de ces poches ne sont plus au congélateur (quelqu’un les a déjà décongelées, ou elles ont atteint leur date).",
+  'errors.FREEZER_BAG_NOT_USED': "Cette poche n’a pas été décongelée.",
+  'errors.FREEZER_UNDO_EXPIRED': "Il est trop tard pour annuler cette décongélation.",
 };

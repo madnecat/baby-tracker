@@ -94,3 +94,29 @@ CREATE TABLE IF NOT EXISTS growth_measurements (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_growth_measured_at ON growth_measurements(measured_at);
+
+-- Breast-milk bags in the freezer. frozen_on / expires_on are calendar dates (YYYY-MM-DD, household
+-- local time); used_at is an instant. `reference` is the number written on the physical bag.
+-- No foreign key to events on purpose (events is rebuilt-and-swapped by some migrations).
+CREATE TABLE IF NOT EXISTS freezer_bags (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  reference INTEGER NOT NULL CHECK (reference > 0),
+  quantity_ml INTEGER NOT NULL CHECK (quantity_ml > 0 AND quantity_ml <= 500),
+  frozen_on TEXT NOT NULL,
+  expires_on TEXT NOT NULL,
+  -- frozen: in the freezer; used: thawed (thawed milk is not tracked any further); expired: past its date or thrown away
+  status TEXT NOT NULL DEFAULT 'frozen' CHECK (status IN ('frozen','used','expired')),
+  used_at TEXT,
+  notes TEXT,
+  created_by INTEGER REFERENCES users(id),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+-- Two bags in the freezer can't carry the same number (it would make the labels ambiguous).
+CREATE UNIQUE INDEX IF NOT EXISTS idx_freezer_frozen_reference ON freezer_bags(reference) WHERE status = 'frozen';
+CREATE INDEX IF NOT EXISTS idx_freezer_status_expires ON freezer_bags(status, expires_on);
+
+-- Days on which the daily "bags about to expire" email check has already run (once a day, even
+-- across add-on restarts).
+CREATE TABLE IF NOT EXISTS freezer_alert_runs (
+  run_on TEXT PRIMARY KEY
+);
