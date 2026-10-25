@@ -31,8 +31,21 @@ substituting the values from that file. Every command below uses `$PI_SSH`.
 
 ## Standard deploy sequence
 
-1. **Bump the version** in `config.yaml` (semver patch/minor bump — Supervisor
-   uses this to decide `update` vs `rebuild`, and it's the only changelog we have).
+**The rule: the version on the Pi is always a version that exists on `main`.**
+Bump the version, merge, *then* deploy — never the other way round. Deploying
+first and merging the bump afterwards leaves the Pi on a version `main` has not
+reached yet (this happened with 0.16.0: live while `main` still said 0.15.0), and
+the next feature then looks like it skips a number.
+
+0. **Start from a merged, up-to-date `main`.** `git switch main && git pull --ff-only`,
+   and make sure the feature PR(s) are merged. Deploy exactly what is on
+   `origin/main`; never deploy from a feature branch or a worktree.
+1. **The version bump is part of the change, merged before deploying.** Put the
+   `config.yaml` bump (semver minor for a feature, patch for a fix — Supervisor
+   uses it to decide `update` vs `rebuild`, and it's the only changelog we have)
+   in the feature PR itself, or in a release PR merged first. The new version
+   must be exactly one step above what `ha apps info` reports: no gaps (0.15 → 0.17)
+   and no repeats. Equal to the Pi's version is normal *before* you bump.
 2. **Build the frontend**: `cd web && npm run build` — do this even for
    backend-only changes if you're unsure; it's cheap and confirms nothing broke.
 3. **Test locally first** (see Testing below) — don't skip this for anything
@@ -41,10 +54,16 @@ substituting the values from that file. Every command below uses `$PI_SSH`.
    extract over the live directory:
    ```sh
    $PI_SSH "rm -rf /local_apps/baby-tracker.new && mkdir -p /local_apps/baby-tracker.new"
-   cd /c/Users/tom_t/baby-tracker && tar --exclude='node_modules' --exclude='dist' --exclude='data-dev'      -cf - Dockerfile config.yaml .dockerignore README.md translations server web |      $PI_SSH "tar -xf - -C /local_apps/baby-tracker.new"
+   cd /c/Users/tom_t/baby-tracker && git fetch origin && git archive origin/main Dockerfile config.yaml .dockerignore README.md translations server web |      $PI_SSH "tar -xf - -C /local_apps/baby-tracker.new"
    $PI_SSH "rm -rf /local_apps/baby-tracker.old &&      mv /local_apps/baby-tracker /local_apps/baby-tracker.old &&      mv /local_apps/baby-tracker.new /local_apps/baby-tracker &&      rm -rf /local_apps/baby-tracker.old"
    ```
-   Two things this fixes, both learned the hard way:
+   `git archive origin/main` ships exactly the committed files of `main`, with
+   LF line endings: not the working copy, which on Windows (`core.autocrlf=true`)
+   has CRLF endings (185 files on the Pi were CRLF before this) and may contain
+   uncommitted edits or untracked files. The `dist`/`node_modules` excludes are no
+   longer needed — they are not in git.
+
+   Things this fixes, all learned the hard way:
 
    - **`tar -x` never deletes.** Extracting over the live directory only ever
      adds, so anything sent once stays for ever. The Pi had accumulated a stale
@@ -66,7 +85,8 @@ substituting the values from that file. Every command below uses `$PI_SSH`.
    (`ha apps rebuild` only works when the version is unchanged; if you forgot
    to bump `config.yaml` you'll get "Local and store versions differ, use
    Update instead of Rebuild" — bump it and re-sync.)
-6. **Verify**: check logs, then hit the live API.
+6. **Verify**: confirm the live version is the one you just merged
+   (`ha apps info local_baby_tracker | grep ^version`), check logs, then hit the live API.
    ```sh
    $PI_SSH "ha apps logs local_baby_tracker" | tail -10
    curl -sS --max-time 15 https://baby.candelaresi.fr/api/auth/session -w "\nHTTP %{http_code}\n"
