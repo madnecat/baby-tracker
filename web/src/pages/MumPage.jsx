@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client.js';
 import { EditEventSheet } from '../components/EditEventSheet.jsx';
 import { ContractionChart } from '../components/ContractionChart.jsx';
+import { FreezerSection } from '../components/FreezerSection.jsx';
 import { EVENT_COLORS, eventTypeLabel, resolve as resolveColor } from '../lib/palette.js';
 import { useColorScheme } from '../lib/useColorScheme.js';
 import { formatDateOnly, formatDateTime, formatDuration, dayKey } from '../lib/dateUtils.js';
@@ -273,6 +274,7 @@ export default function MumPage() {
         onSelect={setEditing}
         onToggle={toggleContractions}
       />
+      <FreezerSection />
       <MedicationStatusList names={medicationNames} lastDoseByName={lastDoseByName} isDark={isDark} />
       <MedicationHistory
         medications={medications}

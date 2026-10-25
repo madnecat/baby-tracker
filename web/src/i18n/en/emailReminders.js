@@ -2,8 +2,8 @@ export default {
   'emailReminders.title': 'Email reminders',
   'emailReminders.unavailable': 'Email reminders are not available on this server.',
   'emailReminders.hint':
-    "Get an email when the waiting time between doses of a medication is over. The email never names the medication — it only says whether it is for Mum or Baby, with a link back here. Mum's reminders go to Mum only; Baby's go to every parent who turns this on. Emails are sent in your app language.",
-  'emailReminders.enable': 'Email me when a dose can be taken again',
+    "Get an email when the waiting time between doses of a medication is over, and once a day when frozen milk bags are about to expire (7 and 2 days before). Medication emails never name the medication — they only say whether it is for Mum or Baby, with a link back here. Mum's medication reminders go to Mum only; Baby's go to every parent who turns this on. Freezer emails go to every parent who turns this on and list the bag numbers. Emails are sent in your app language.",
+  'emailReminders.enable': 'Email me reminders (medication doses, frozen milk about to expire)',
   'emailReminders.emailLabel': 'Email address',
   'emailReminders.emailPlaceholder': 'you@example.com',
   'emailReminders.saved': 'Saved.',

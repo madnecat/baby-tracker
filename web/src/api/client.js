@@ -81,6 +81,18 @@ export const api = {
     request(`/growth/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
   deleteGrowth: (id) => request(`/growth/${id}`, { method: 'DELETE' }),
 
+  getFreezer: () => request('/freezer'),
+  createFreezerBag: (bag) => request('/freezer', { method: 'POST', body: JSON.stringify(bag) }),
+  updateFreezerBag: (id, patch) =>
+    request(`/freezer/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
+  discardFreezerBag: (id) => request(`/freezer/${id}/discard`, { method: 'POST' }),
+  planFreezer: (targetMl) =>
+    request('/freezer/plan', { method: 'POST', body: JSON.stringify({ targetMl }) }),
+  thawFreezerBags: (bagIds) =>
+    request('/freezer/thaw', { method: 'POST', body: JSON.stringify({ bagIds }) }),
+  undoFreezerThaw: (bagIds) =>
+    request('/freezer/undo', { method: 'POST', body: JSON.stringify({ bagIds }) }),
+
   getChild: () => request('/child'),
   putChild: (child) => request('/child', { method: 'PUT', body: JSON.stringify(child) }),
 

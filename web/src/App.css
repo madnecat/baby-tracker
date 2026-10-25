@@ -575,3 +575,24 @@ textarea {
   color: var(--text-muted);
   padding: 40px 20px;
 }
+
+/* Freezer stock: how close a bag is to its date. */
+.freezer-urgent {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.freezer-soon {
+  color: #c98500;
+  font-weight: 600;
+}
+
+.link-button {
+  background: none;
+  border: 0;
+  padding: 4px 0;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
