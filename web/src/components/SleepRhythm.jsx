@@ -162,12 +162,15 @@ export function SleepRhythm({ rhythm, asleep, color }) {
           max: night.perPeriod.max,
           duration: formatMinutes(night.medianMinutes ?? 0),
         });
-  const dayText = t('sleep.rhythm.day', {
-    count: Math.round(day.perPeriod.median),
-    min: day.perPeriod.min,
-    max: day.perPeriod.max,
-    duration: formatMinutes(day.medianMinutes ?? 0),
-  });
+  const dayText =
+    day.perPeriod.median === 0 && day.medianMinutes == null
+      ? t('sleep.rhythm.dayNone')
+      : t('sleep.rhythm.day', {
+          count: Math.round(day.perPeriod.median),
+          min: day.perPeriod.min,
+          max: day.perPeriod.max,
+          duration: formatMinutes(day.medianMinutes ?? 0),
+        });
 
   return (
     <div style={{ marginBottom: 12 }}>

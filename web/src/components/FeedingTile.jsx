@@ -46,6 +46,16 @@ export function FeedingTile({ onChange }) {
       .catch(() => {});
   }, []);
 
+  // The other parent may have paused or stopped the feed while this screen was in the background:
+  // Pause, Resume and Stop build on what is shown, so refresh it when the app comes back.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') api.activeEvent('breastfeeding').then(setActive).catch(() => {});
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+
   useEffect(() => {
     if (!active) return;
     const id = setInterval(() => setTick((t) => t + 1), 1000);

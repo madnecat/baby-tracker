@@ -79,6 +79,7 @@ export default {
   'sleep.rhythm.nightUsual': 'often awake {list}',
   'sleep.rhythm.day_one': 'Day: {count} nap ({min}–{max}), awake about {duration} before',
   'sleep.rhythm.day_other': 'Day: {count} naps ({min}–{max}), awake about {duration} before each',
+  'sleep.rhythm.dayNone': 'Day: usually no naps',
   'sleep.rhythm.dayUsual': 'naps often start {list}',
   'sleep.rhythm.spread': 'no regular time',
   'sleep.tapHint': 'Tap a sleep block for its times.',

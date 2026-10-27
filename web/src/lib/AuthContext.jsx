@@ -48,29 +48,43 @@ export function AuthProvider({ children }) {
   }, [user, locale, setLocale]);
 
   // The theme lives on the account too: every device shows the one chosen on any of them.
+  const signedIn = !!user;
+  const accountTheme = user ? (user.theme ?? null) : undefined;
   useEffect(() => {
-    if (user) applyTheme(user.theme ?? null);
-  }, [user?.id, user?.theme]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (accountTheme !== undefined) applyTheme(accountTheme);
+  }, [accountTheme]);
 
-  // Coming back to the app (a tab left open, a phone unlocked) picks up a theme changed elsewhere.
+  // Coming back to the app (a tab left open, a phone unlocked) picks up a theme changed elsewhere,
+  // unless a choice made here is still being saved: the server would still hold the old one.
+  const savingTheme = useRef(false);
   useEffect(() => {
-    if (!user) return;
+    if (!signedIn) return;
     const onVisible = () => {
-      if (document.visibilityState !== 'visible') return;
+      if (document.visibilityState !== 'visible' || savingTheme.current) return;
       api
         .session()
-        .then((fresh) => setUser((u) => (u && u.theme !== (fresh.theme ?? null) ? { ...u, theme: fresh.theme ?? null } : u)))
+        .then((fresh) => {
+          if (savingTheme.current) return;
+          const theme = fresh.theme ?? null;
+          setUser((u) => (u && u.theme !== theme ? { ...u, theme } : u));
+        })
         .catch(() => {});
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [signedIn]);
 
   /** Chooses the theme ('light' | 'dark' | null for the device's own): shown at once, saved to the account. */
   const setTheme = useCallback((theme) => {
     applyTheme(theme);
     setUser((u) => (u ? { ...u, theme } : u));
-    api.updateTheme(theme).catch(() => {});
+    savingTheme.current = true;
+    api
+      .updateTheme(theme)
+      .catch(() => {})
+      .finally(() => {
+        savingTheme.current = false;
+      });
   }, []);
 
   const login = useCallback(async (username, password) => {

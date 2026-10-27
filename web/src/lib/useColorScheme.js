@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 // The account's choice (data-theme on <html>, see theme.js) wins over the device's setting.
 function currentlyDark() {
-  const chosen = document.documentElement.getAttribute('data-theme');
+  const chosen = globalThis.document?.documentElement?.getAttribute('data-theme');
   if (chosen === 'dark') return true;
   if (chosen === 'light') return false;
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;

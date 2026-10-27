@@ -83,6 +83,7 @@ export default {
   'sleep.rhythm.nightUsual': 'réveil fréquent vers {list}',
   'sleep.rhythm.day_one': 'Jour : {count} sieste ({min}–{max}), éveil d’environ {duration} avant',
   'sleep.rhythm.day_other': 'Jour : {count} siestes ({min}–{max}), éveil d’environ {duration} avant chacune',
+  'sleep.rhythm.dayNone': 'Jour : généralement aucune sieste',
   'sleep.rhythm.dayUsual': 'siestes souvent vers {list}',
   'sleep.rhythm.spread': 'pas d’heure régulière',
   'sleep.tapHint': 'Touchez un bloc de sommeil pour voir ses horaires.',

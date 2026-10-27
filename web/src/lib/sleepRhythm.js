@@ -104,6 +104,8 @@ export function asleepShare(rows, rowBlocks) {
   const sums = new Array(ASLEEP_SLOTS).fill(0);
   const seen = new Array(ASLEEP_SLOTS).fill(0);
   rows.forEach((row, i) => {
+    // A day with nothing logged is a day nobody wrote down, not a day awake.
+    if (!rowBlocks[i].length) return;
     for (let s = 0; s < ASLEEP_SLOTS; s += 1) {
       const from = row.from + s * slotMs;
       const to = from + slotMs;
@@ -130,11 +132,14 @@ export function asleepShare(rows, rowBlocks) {
  */
 export function rhythmSummary(intervals, now, days) {
   const good = intervals.filter((s) => !s.suspect).sort((a, b) => a.start - b.start);
+  const doubtful = intervals.filter((s) => s.suspect);
 
   const gaps = [];
   for (let k = 1; k < good.length; k += 1) {
     const minutes = (good[k].start - good[k - 1].effectiveEnd) / MIN;
-    if (minutes >= WAKE_MIN_MINUTES && minutes <= WAKE_MAX_MINUTES) {
+    // A gap with a doubtful sleep inside it is not known to be awake time.
+    const hidesSleep = doubtful.some((s) => s.start < good[k].start && s.effectiveEnd > good[k - 1].effectiveEnd);
+    if (!hidesSleep && minutes >= WAKE_MIN_MINUTES && minutes <= WAKE_MAX_MINUTES) {
       gaps.push({ wakeAt: good[k - 1].effectiveEnd, sleepAt: good[k].start, minutes });
     }
   }
@@ -147,7 +152,10 @@ export function rhythmSummary(intervals, now, days) {
     d.setHours(DAY_START_HOUR, 0, 0, 0);
     const dayFrom = d.getTime();
     const dayTo = dayFrom + (NIGHT_START_HOUR - DAY_START_HOUR) * HOUR;
-    const nightTo = dayTo + (24 - NIGHT_START_HOUR + DAY_START_HOUR) * HOUR;
+    // 08:00 the next morning by the clock (a 23 h or 25 h night at the clock change).
+    const n = new Date(dayFrom);
+    n.setDate(n.getDate() + 1);
+    const nightTo = n.getTime();
     const logged = (from, to) => good.some((s) => s.effectiveEnd > from && s.start < to);
 
     // `at` / `minutes`: what the text reports (sleeps starting in the day, wake-ups in the night);
