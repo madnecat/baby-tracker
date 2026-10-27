@@ -1,5 +1,6 @@
 export default {
   'settings.title': 'Paramètres',
+  'settings.build': 'Version de l’app : {build}',
   'settings.signedInAs': 'Connecté en tant que {name}',
   'settings.password.title': 'Changer le mot de passe',
   'settings.password.current': 'Mot de passe actuel',

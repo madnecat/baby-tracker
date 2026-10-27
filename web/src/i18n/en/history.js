@@ -20,6 +20,7 @@ export default {
   'history.summary.diaper': 'Diaper ({parts})',
   'history.summary.diaperNone': 'Diaper (none noted)',
   'history.summary.bottle': 'Bottle — {volume} mL ({contents})',
+  'history.feedPaused': 'Paused {paused} · {total} start to finish',
   'history.summary.breastfeeding': 'Breastfeeding — {sides} — {duration}',
   'history.summary.outing': 'Outing — {duration}',
   'history.summary.outingAt': 'Outing — {location} — {duration}',

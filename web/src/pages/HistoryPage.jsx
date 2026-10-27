@@ -4,8 +4,9 @@ import { EditEventSheet } from '../components/EditEventSheet.jsx';
 import { EditGrowthSheet } from '../components/EditGrowthSheet.jsx';
 import { EVENT_COLORS, eventTypeLabel, resolve as resolveColor } from '../lib/palette.js';
 import { useColorScheme } from '../lib/useColorScheme.js';
-import { dayKey, formatDateOnly, formatDateTime, formatDuration } from '../lib/dateUtils.js';
+import { dayKey, formatDateOnly, formatDateTime, formatDuration, formatElapsedMs } from '../lib/dateUtils.js';
 import { describeSides, observationsText } from '../lib/breastfeeding.js';
+import { activeMs, pausedMs } from '../lib/feedPauses.js';
 import { formatNumber, intlLocale, t, tOr } from '../i18n/index.js';
 import {
   getMedicationStatus,
@@ -57,7 +58,7 @@ function summarize(item) {
     case 'breastfeeding':
       return t('history.summary.breastfeeding', {
         sides: describeSides(d),
-        duration: formatDuration(item.startedAt, item.endedAt),
+        duration: formatElapsedMs(activeMs(item)),
       });
     case 'outing':
       return d.location
@@ -269,6 +270,14 @@ export default function HistoryPage() {
               <div className="details">
                 <div>{summarize(item)}</div>
                 <div className="time">{formatDateTime(item.startedAt)}</div>
+                {item.type === 'breastfeeding' && item.endedAt && pausedMs(item) > 0 && (
+                  <div className="time">
+                    {t('history.feedPaused', {
+                      paused: formatElapsedMs(pausedMs(item)),
+                      total: formatDuration(item.startedAt, item.endedAt),
+                    })}
+                  </div>
+                )}
                 {item.type === 'breastfeeding' && observationsText(item.details) && (
                   <div className="time">{observationsText(item.details)}</div>
                 )}

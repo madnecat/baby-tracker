@@ -287,6 +287,80 @@ textarea {
   border-color: transparent;
 }
 
+/* A running feed: one tile-sized block (same grid cell, same height as .event-tile) split into
+   two halves that always stay side by side, whatever the screen width. */
+.split-tile {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto 1fr;
+  min-height: 108px;
+  min-width: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--tile-color);
+  color: #fff;
+  border: 1px solid transparent;
+}
+
+.split-tile.paused {
+  background: var(--surface);
+  color: var(--text-primary);
+  border-color: var(--tile-color);
+}
+
+.split-tile-status {
+  grid-column: 1 / -1;
+  padding: 8px 10px 0;
+  font-size: 0.75rem;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.9;
+}
+
+.split-tile-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 6px 4px 10px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+
+.split-tile-btn + .split-tile-btn {
+  border-left: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.split-tile.paused .split-tile-btn + .split-tile-btn {
+  border-left-color: var(--border);
+}
+
+.split-tile-btn:active:not(:disabled) {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.split-tile-btn:disabled {
+  opacity: 0.6;
+}
+
+.split-tile-btn .tile-icon {
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.split-tile-btn .tile-label {
+  font-weight: 600;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
 /* ---------- Bottom sheet ---------- */
 
 .sheet-backdrop {

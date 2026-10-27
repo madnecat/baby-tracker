@@ -4,6 +4,8 @@ import { api, errorMessage } from '../api/client.js';
 import { CONSISTENCY_OPTIONS } from '../lib/diaperOptions.js';
 import { AFTER_FEED, FEED_TAGS } from '../lib/breastfeeding.js';
 import { hasMessage, t, tOr } from '../i18n/index.js';
+import { pausesOf } from '../lib/feedPauses.js';
+import { formatClock } from '../lib/dateUtils.js';
 import { readNumberField } from '../lib/numberField.js';
 
 function toLocalInputValue(iso) {
@@ -222,6 +224,30 @@ export function EditEventSheet({ event, onClose, onSaved, onDeleted }) {
                   </button>
                 ))}
               </div>
+            </>
+          )}
+          {pausesOf(details).length > 0 && (
+            <>
+              <label style={{ display: 'block', margin: '12px 0 6px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                {t('editEvent.pauses')}
+              </label>
+              {pausesOf(details).map((p) => (
+                <div key={p.from} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                  <span>
+                    {formatClock(p.from)} → {p.to ? formatClock(p.to) : '…'}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => {
+                      const left = pausesOf(details).filter((q) => q !== p);
+                      setDetail('pauses', left.length ? left : undefined);
+                    }}
+                  >
+                    {t('editEvent.removePause')}
+                  </button>
+                </div>
+              ))}
             </>
           )}
           <label style={{ display: 'block', margin: '12px 0 6px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>

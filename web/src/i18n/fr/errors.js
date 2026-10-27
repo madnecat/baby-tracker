@@ -11,6 +11,7 @@ export default {
   'errors.PASSWORD_FIELDS_REQUIRED': 'Saisissez votre mot de passe actuel et un nouveau mot de passe.',
   'errors.PASSWORD_WRONG': 'Le mot de passe actuel est incorrect.',
   'errors.LANGUAGE_INVALID': "Cette langue n’est pas prise en charge.",
+  'errors.THEME_INVALID': "Ce thème n’est pas pris en charge.",
   'errors.TOKEN_LABEL_REQUIRED': 'Saisissez un nom pour le jeton.',
 
   'errors.EVENT_TYPE_REQUIRED': "Le type d’événement est manquant.",

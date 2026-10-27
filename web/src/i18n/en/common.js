@@ -21,4 +21,10 @@ export default {
   'language.hint': 'Saved to your account, so it follows you on every device. Reminder emails use it too.',
   'language.en': 'English',
   'language.fr': 'Français',
+
+  'theme.title': 'Theme',
+  'theme.auto': 'Same as device',
+  'theme.light': 'Light',
+  'theme.dark': 'Dark',
+  'theme.hint': 'Saved to your account, so it follows you on every device.',
 };

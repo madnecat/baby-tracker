@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, useCallback } f
 import { api } from '../api/client.js';
 import { useI18n } from '../i18n/I18nProvider.jsx';
 import { isSupportedLocale } from '../i18n/index.js';
+import { applyTheme } from './theme.js';
 
 const AuthContext = createContext(null);
 
@@ -46,6 +47,32 @@ export function AuthProvider({ children }) {
     }
   }, [user, locale, setLocale]);
 
+  // The theme lives on the account too: every device shows the one chosen on any of them.
+  useEffect(() => {
+    if (user) applyTheme(user.theme ?? null);
+  }, [user?.id, user?.theme]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Coming back to the app (a tab left open, a phone unlocked) picks up a theme changed elsewhere.
+  useEffect(() => {
+    if (!user) return;
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      api
+        .session()
+        .then((fresh) => setUser((u) => (u && u.theme !== (fresh.theme ?? null) ? { ...u, theme: fresh.theme ?? null } : u)))
+        .catch(() => {});
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Chooses the theme ('light' | 'dark' | null for the device's own): shown at once, saved to the account. */
+  const setTheme = useCallback((theme) => {
+    applyTheme(theme);
+    setUser((u) => (u ? { ...u, theme } : u));
+    api.updateTheme(theme).catch(() => {});
+  }, []);
+
   const login = useCallback(async (username, password) => {
     const loggedIn = await api.login(username, password);
     setUser(loggedIn);
@@ -68,7 +95,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, setTheme }}>
       {children}
     </AuthContext.Provider>
   );

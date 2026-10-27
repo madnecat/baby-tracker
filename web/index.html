@@ -6,6 +6,13 @@
     <meta name="theme-color" content="#1b1030" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#fdf6ff" media="(prefers-color-scheme: light)" />
     <title>Baby Tracker</title>
+    <script>
+      // Paint the saved theme before the app loads, so a dark choice never flashes white.
+      try {
+        var saved = localStorage.getItem('baby-tracker.theme');
+        if (saved === 'light' || saved === 'dark') document.documentElement.setAttribute('data-theme', saved);
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

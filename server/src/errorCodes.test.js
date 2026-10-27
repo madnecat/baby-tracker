@@ -259,6 +259,23 @@ test('PATCH /api/auth/language stores the language on the account', async (t) =>
   assert.throws(() => db.prepare(`UPDATE users SET language = 'de' WHERE id = 1`).run(), /CHECK/);
 });
 
+test('PATCH /api/auth/theme stores the theme on the account; null goes back to the device setting', async (t) => {
+  const db = makeDb();
+  const call = await serve('/api/auth', authRouter, db, t);
+  const theme = (id) => db.prepare(`SELECT theme FROM users WHERE id = ${id}`).get().theme;
+  assert.equal(theme(1), null, 'NULL until chosen');
+  assertError(await call('PATCH', '/theme', { theme: 'purple' }), 400, 'THEME_INVALID', 'theme must be "light", "dark" or null.');
+  assertError(await call('PATCH', '/theme', {}), 400, 'THEME_INVALID');
+  assert.equal(theme(1), null);
+  const ok = await call('PATCH', '/theme', { theme: 'dark' });
+  assert.equal(ok.status, 200);
+  assert.deepEqual(ok.body, { theme: 'dark' });
+  assert.equal(theme(1), 'dark');
+  assert.equal(theme(2), null, 'other users untouched');
+  assert.equal((await call('PATCH', '/theme', { theme: null })).status, 200);
+  assert.equal(theme(1), null);
+});
+
 test('getUserLanguage defaults to English; the test email follows the account language', async (t) => {
   const db = makeDb();
   assert.equal(getUserLanguage(db, 1), 'en');
@@ -288,7 +305,7 @@ test('migration v6 adds users.language to a v5 database and keeps users', () => 
   db.exec(`ALTER TABLE users DROP COLUMN language`);
   db.pragma('user_version = 5');
   runMigrations(db);
-  assert.equal(db.pragma('user_version', { simple: true }), 6);
+  assert.equal(db.pragma('user_version', { simple: true }), 7);
   assert.deepEqual(
     db.prepare(`SELECT username, language FROM users ORDER BY id`).all(),
     [

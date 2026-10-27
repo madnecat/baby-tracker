@@ -22,4 +22,10 @@ export default {
     'Enregistrée sur votre compte : elle vous suit sur tous vos appareils. Les emails de rappel l’utilisent aussi.',
   'language.en': 'English',
   'language.fr': 'Français',
+
+  'theme.title': 'Thème',
+  'theme.auto': 'Comme l’appareil',
+  'theme.light': 'Clair',
+  'theme.dark': 'Sombre',
+  'theme.hint': 'Enregistré sur votre compte : il vous suit sur tous vos appareils.',
 };

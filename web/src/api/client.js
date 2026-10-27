@@ -57,6 +57,8 @@ export const api = {
     request('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
   logout: () => request('/auth/logout', { method: 'POST' }),
   session: () => request('/auth/session'),
+  updateTheme: (theme) =>
+    request('/auth/theme', { method: 'PATCH', body: JSON.stringify({ theme }) }),
   updateLanguage: (language) =>
     request('/auth/language', { method: 'PATCH', body: JSON.stringify({ language }) }),
   changePassword: (currentPassword, newPassword) =>

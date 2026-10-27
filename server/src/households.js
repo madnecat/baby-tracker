@@ -457,7 +457,7 @@ export function findHouseholdBySessionToken(token) {
   return findAcrossHouseholds((db) =>
     db
       .prepare(
-        `SELECT users.id, users.username, users.display_name AS displayName, users.language
+        `SELECT users.id, users.username, users.display_name AS displayName, users.language, users.theme
          FROM sessions JOIN users ON users.id = sessions.user_id
          WHERE sessions.token = ? AND sessions.expires_at > datetime('now')`
       )
