@@ -11,6 +11,7 @@ export default {
   'errors.PASSWORD_FIELDS_REQUIRED': 'Enter your current password and a new password.',
   'errors.PASSWORD_WRONG': 'Current password is incorrect.',
   'errors.LANGUAGE_INVALID': 'That language is not supported.',
+  'errors.THEME_INVALID': 'That theme is not supported.',
   'errors.TOKEN_LABEL_REQUIRED': 'Enter a label for the token.',
 
   'errors.EVENT_TYPE_REQUIRED': 'The event type is missing.',

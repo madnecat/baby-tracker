@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { sleepBlocks } from '../lib/sleepBand.js';
+import { asleepShare, rhythmSummary } from '../lib/sleepRhythm.js';
+import { SleepRhythm } from './SleepRhythm.jsx';
 import { blockAtSpan, timelineRows, timelineTicks } from '../lib/sleepTimeline.js';
 import { formatClock, formatDayShort, formatMinutes, formatMoment } from '../lib/dateUtils.js';
 import { t } from '../i18n/index.js';
@@ -86,6 +88,17 @@ export function SleepTimeline({ intervals, now, color, days }) {
   const [selected, setSelected] = useState(null); // { row, index }
   const rows = useMemo(() => timelineRows(now, days), [now, days]);
   const rowBlocks = useMemo(() => rows.map((r) => sleepBlocks(intervals, r.from, r.to)), [rows, intervals]);
+  // A typical day and night only mean something over a week or more.
+  const rhythm = useMemo(
+    () => (days >= 7 ? rhythmSummary(intervals, now, days) : null),
+    [intervals, now, days]
+  );
+  // Over a week the bars of wake-ups and sleeps read best; from 30 days they flatten out and the typical
+  // asleep/awake band is the one that shows the pattern.
+  const asleep = useMemo(
+    () => (rhythm && days >= 30 ? asleepShare(rows, rowBlocks) : null),
+    [rhythm, days, rows, rowBlocks]
+  );
   const height = rowHeight(days);
   const grid = days > 1;
   const chosen = selected ? rowBlocks[selected.row]?.[selected.index] : null;
@@ -103,6 +116,7 @@ export function SleepTimeline({ intervals, now, color, days }) {
               <Ticks from={rows[0].from} span={rows[0].span} stepHours={6} />
             </div>
           </div>
+          {rhythm && <SleepRhythm rhythm={rhythm} asleep={asleep} color={color} />}
           <div style={{ display: 'flex', flexDirection: 'column', gap: days > 30 ? 1 : 3 }}>
             {rows.map((row, i) => (
               <div key={row.from} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>

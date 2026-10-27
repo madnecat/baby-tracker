@@ -20,6 +20,7 @@ export default {
   'history.summary.diaper': 'Couche ({parts})',
   'history.summary.diaperNone': 'Couche (rien de noté)',
   'history.summary.bottle': 'Biberon — {volume} mL ({contents})',
+  'history.feedPaused': 'En pause {paused} · {total} du début à la fin',
   'history.summary.breastfeeding': 'Allaitement — {sides} — {duration}',
   'history.summary.outing': 'Sortie — {duration}',
   'history.summary.outingAt': 'Sortie — {location} — {duration}',

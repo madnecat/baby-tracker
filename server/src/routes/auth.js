@@ -35,6 +35,7 @@ authRouter.post('/login', (req, res) => {
     username: found.result.username,
     displayName: found.result.display_name,
     language: found.result.language ?? null,
+    theme: found.result.theme ?? null,
   });
 });
 
@@ -57,6 +58,17 @@ authRouter.patch('/language', requireAuth, (req, res) => {
   }
   req.db.prepare(`UPDATE users SET language = ? WHERE id = ?`).run(language, req.user.id);
   res.json({ language });
+});
+
+// The person's colour theme: "light", "dark", or null to follow each device's own setting.
+// Stored on the account so it follows them to every device, like the language.
+authRouter.patch('/theme', requireAuth, (req, res) => {
+  const { theme } = req.body || {};
+  if (theme !== 'light' && theme !== 'dark' && theme !== null) {
+    return res.status(400).json({ error: 'theme must be "light", "dark" or null.', code: 'THEME_INVALID' });
+  }
+  req.db.prepare(`UPDATE users SET theme = ? WHERE id = ?`).run(theme, req.user.id);
+  res.json({ theme });
 });
 
 authRouter.patch('/password', requireAuth, (req, res) => {

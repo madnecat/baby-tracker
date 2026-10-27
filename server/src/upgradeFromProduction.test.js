@@ -316,7 +316,7 @@ for (const s of SCENARIOS) {
 
     const session = households.findHouseholdBySessionToken(`valid-alice-${s.slug}`);
     assert.equal(session.slug, s.slug);
-    assert.deepEqual(session.result, { id: 1, username: `alice-${s.slug}`, displayName: 'Alice', language: aliceLanguage });
+    assert.deepEqual(session.result, { id: 1, username: `alice-${s.slug}`, displayName: 'Alice', language: aliceLanguage, theme: null });
     assert.equal(households.findHouseholdBySessionToken(`valid-bob-${s.slug}`).result.displayName, 'Bob');
     assert.equal(households.findHouseholdBySessionToken(`expired-alice-${s.slug}`), null);
     assert.equal(households.findHouseholdBySessionToken('never-issued'), null);
@@ -425,7 +425,7 @@ test('users without a language still log in; PATCH /language persists and is ret
   assert.equal(bad.body.code, 'AUTH_INVALID_CREDENTIALS');
   const login = await call('POST', '/login', { username: 'alice-prod', password: PASSWORDS[0] });
   assert.equal(login.status, 200);
-  assert.deepEqual(login.body, { id: 1, username: 'alice-prod', displayName: 'Alice', language: null });
+  assert.deepEqual(login.body, { id: 1, username: 'alice-prod', displayName: 'Alice', language: null, theme: null });
   const cookie = login.setCookie.split(';')[0];
 
   // an OLD (pre-upgrade) session still authenticates

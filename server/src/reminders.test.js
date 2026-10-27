@@ -53,7 +53,7 @@ test('fresh and migrated databases both end up at the latest schema', () => {
   const db = makeDb();
   const cols = db.prepare(`PRAGMA table_info(settings)`).all().map((c) => c.name);
   assert.ok(cols.includes('mom_user_id') && cols.includes('hide_baby_medication'));
-  assert.equal(db.pragma('user_version', { simple: true }), 6);
+  assert.equal(db.pragma('user_version', { simple: true }), 7);
   assert.ok(db.prepare(`PRAGMA table_info(users)`).all().some((c) => c.name === 'language'));
 });
 
@@ -304,7 +304,7 @@ test('migration v5 upgrades a real v4 database without touching its settings', (
 
   runMigrations(db);
 
-  assert.equal(db.pragma('user_version', { simple: true }), 6);
+  assert.equal(db.pragma('user_version', { simple: true }), 7);
   const row = db.prepare(`SELECT * FROM settings WHERE id = 1`).get();
   assert.equal(row.feed_prompt, 1, 'existing rows get the default (on)');
   assert.equal(row.hide_contractions, 1);

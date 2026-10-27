@@ -54,6 +54,10 @@ export const WHO_BAND_COLORS = {
   '97th': { light: '#cde2fb', dark: '#184f95' },
 };
 
+// "Awake" next to the sleep red in the typical day/night chart: a sun-like amber, so asleep and awake
+// read at a glance without a legend.
+export const AWAKE_COLOR = { light: '#f0b429', dark: '#e0a526' };
+
 // The child's own measurement series stands out against the blue bands.
 export const CHILD_SERIES_COLOR = { light: '#eb6834', dark: '#d95926' };
 

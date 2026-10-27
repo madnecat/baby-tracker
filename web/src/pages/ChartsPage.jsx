@@ -9,6 +9,7 @@ import { EVENT_COLORS, DIAPER_SUBTYPE_COLORS } from '../lib/palette.js';
 import { aggregateByDay } from '../lib/aggregate.js';
 import { sleepStats } from '../lib/sleep.js';
 import { ageInMonths, formatDayShort } from '../lib/dateUtils.js';
+import { activeMs } from '../lib/feedPauses.js';
 import { loadRangeDays, saveRangeDays } from '../lib/chartsRange.js';
 import { t } from '../i18n/index.js';
 
@@ -90,8 +91,8 @@ export default function ChartsPage() {
         rangeDays,
         () => ({ minutes: 0 }),
         (acc, e) => ({
-          minutes:
-            acc.minutes + Math.round((new Date(e.endedAt) - new Date(e.startedAt)) / 60000),
+          // Time actually fed: pauses (the baby dozing on the breast) are left out.
+          minutes: acc.minutes + Math.round(activeMs(e) / 60000),
         })
       ),
     [events, rangeDays]

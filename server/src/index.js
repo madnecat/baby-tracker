@@ -59,9 +59,28 @@ app.use('/api/freezer', freezerRouter);
 mountMcp(app);
 
 const webDist = path.join(__dirname, '..', '..', 'web', 'dist');
-app.use(express.static(webDist));
+// Built files carry a content hash in their name, so they can be kept for ever. index.html is the
+// one file whose name never changes and that points at the current build: it must be re-checked
+// on every visit, or a phone keeps opening yesterday's app after an update.
+app.use(
+  '/assets',
+  express.static(path.join(webDist, 'assets'), {
+    immutable: true,
+    maxAge: '1y',
+    fallthrough: false,
+  })
+);
+app.use(
+  express.static(webDist, {
+    index: false,
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
+    },
+  })
+);
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/')) return next();
+  res.setHeader('Cache-Control', 'no-cache');
   res.sendFile(path.join(webDist, 'index.html'));
 });
 

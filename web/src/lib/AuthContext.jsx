@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, useCallback } f
 import { api } from '../api/client.js';
 import { useI18n } from '../i18n/I18nProvider.jsx';
 import { isSupportedLocale } from '../i18n/index.js';
+import { applyTheme } from './theme.js';
 
 const AuthContext = createContext(null);
 
@@ -46,6 +47,46 @@ export function AuthProvider({ children }) {
     }
   }, [user, locale, setLocale]);
 
+  // The theme lives on the account too: every device shows the one chosen on any of them.
+  const signedIn = !!user;
+  const accountTheme = user ? (user.theme ?? null) : undefined;
+  useEffect(() => {
+    if (accountTheme !== undefined) applyTheme(accountTheme);
+  }, [accountTheme]);
+
+  // Coming back to the app (a tab left open, a phone unlocked) picks up a theme changed elsewhere,
+  // unless a choice made here is still being saved: the server would still hold the old one.
+  const savingTheme = useRef(false);
+  useEffect(() => {
+    if (!signedIn) return;
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible' || savingTheme.current) return;
+      api
+        .session()
+        .then((fresh) => {
+          if (savingTheme.current) return;
+          const theme = fresh.theme ?? null;
+          setUser((u) => (u && u.theme !== theme ? { ...u, theme } : u));
+        })
+        .catch(() => {});
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [signedIn]);
+
+  /** Chooses the theme ('light' | 'dark' | null for the device's own): shown at once, saved to the account. */
+  const setTheme = useCallback((theme) => {
+    applyTheme(theme);
+    setUser((u) => (u ? { ...u, theme } : u));
+    savingTheme.current = true;
+    api
+      .updateTheme(theme)
+      .catch(() => {})
+      .finally(() => {
+        savingTheme.current = false;
+      });
+  }, []);
+
   const login = useCallback(async (username, password) => {
     const loggedIn = await api.login(username, password);
     setUser(loggedIn);
@@ -68,7 +109,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, setTheme }}>
       {children}
     </AuthContext.Provider>
   );

@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL,
   -- The person's app language (also used for their reminder emails). NULL = never chosen yet.
   language TEXT CHECK (language IN ('en','fr')),
+  -- The person's colour theme (light | dark). NULL = follow the device's setting.
+  theme TEXT CHECK (theme IN ('light','dark')),
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

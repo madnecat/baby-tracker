@@ -3,6 +3,7 @@
 // and the numbers derived from them are only ever shown as plain medians and counts.
 
 import { t } from '../i18n/index.js';
+import { activeMs } from './feedPauses.js';
 
 // `key` is the stored value; `labelKey` the catalog key. `label` is a lazy getter (resolved when
 // read, never at import) kept so unmigrated callers work; prefer t(item.labelKey).
@@ -102,7 +103,8 @@ export function observationsText(details) {
 function minutesOf(event) {
   if (!event.endedAt) return null;
   const ms = Date.parse(event.endedAt) - Date.parse(event.startedAt);
-  return Number.isFinite(ms) && ms >= 0 ? ms / 60000 : null;
+  // Pauses (the baby dozing on the breast) don't count towards how long a feed lasted.
+  return Number.isFinite(ms) && ms >= 0 ? activeMs(event) / 60000 : null;
 }
 
 function median(values) {

@@ -8,6 +8,8 @@ import { ChildProfileSection } from '../components/ChildProfileSection.jsx';
 import { EmailRemindersSection } from '../components/EmailRemindersSection.jsx';
 import { FeedingSettingsSection } from '../components/FeedingSettingsSection.jsx';
 import { LanguageSection } from '../components/LanguageSection.jsx';
+import { ThemeSection } from '../components/ThemeSection.jsx';
+import { runningScript } from '../lib/updateCheck.js';
 
 export default function SettingsPage() {
   const { user, logout } = useAuth();
@@ -41,6 +43,7 @@ export default function SettingsPage() {
       </div>
 
       <LanguageSection />
+      <ThemeSection />
 
       <ChildProfileSection />
 
@@ -86,6 +89,11 @@ export default function SettingsPage() {
       <button className="btn btn-block" style={{ marginTop: 24 }} onClick={logout}>
         {t('settings.logOut')}
       </button>
+
+      {/* Which build this device is really running: tells a stale page from a real bug. */}
+      <p style={{ marginTop: 16, fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+        {t('settings.build', { build: runningScript()?.match(/index-(.+)\.js/)?.[1] ?? 'dev' })}
+      </p>
     </div>
   );
 }

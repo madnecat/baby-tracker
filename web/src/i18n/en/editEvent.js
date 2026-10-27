@@ -15,6 +15,8 @@ export default {
   'editEvent.endedAt': 'Ended at',
   'editEvent.consistency': 'Consistency',
   'editEvent.volume': 'Volume (mL)',
+  'editEvent.pauses': 'Pauses',
+  'editEvent.removePause': 'Remove',
   'editEvent.startedWith': 'Started with',
   'editEvent.howItWent': 'How it went',
   'editEvent.intensity.mild': 'Mild',

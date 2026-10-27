@@ -6,7 +6,10 @@ import { FeedQualitySheet } from './FeedQualitySheet.jsx';
 import { api, errorMessage } from '../api/client.js';
 import { t } from '../i18n/index.js';
 import { EVENT_COLORS } from '../lib/palette.js';
-import { formatDuration } from '../lib/dateUtils.js';
+import { formatDuration, formatElapsedMs } from '../lib/dateUtils.js';
+import { activeMs, isPaused, stopPatch, withPause, withResume } from '../lib/feedPauses.js';
+import { useColorScheme } from '../lib/useColorScheme.js';
+import { resolve } from '../lib/palette.js';
 import { describeSides, lastFinishedFeed, suggestNextSide } from '../lib/breastfeeding.js';
 
 const SIDE_CHOICES = [
@@ -33,6 +36,7 @@ export function FeedingTile({ onChange }) {
   const [askQuality, setAskQuality] = useState(false);
   // The feed that was just stopped, as the server returned it (see FeedQualitySheet).
   const [justStopped, setJustStopped] = useState(null);
+  const isDark = useColorScheme();
 
   useEffect(() => {
     api.activeEvent('breastfeeding').then(setActive);
@@ -40,6 +44,16 @@ export function FeedingTile({ onChange }) {
       .getSettings()
       .then((s) => setAskQuality(s.feedPrompt !== false))
       .catch(() => {});
+  }, []);
+
+  // The other parent may have paused or stopped the feed while this screen was in the background:
+  // Pause, Resume and Stop build on what is shown, so refresh it when the app comes back.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') api.activeEvent('breastfeeding').then(setActive).catch(() => {});
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
   }, []);
 
   useEffect(() => {
@@ -82,10 +96,26 @@ export function FeedingTile({ onChange }) {
     }
   }
 
+  async function togglePause() {
+    setBusy(true);
+    setError(null);
+    try {
+      const details = paused ? withResume(active.details) : withPause(active.details);
+      setActive(await api.updateEvent(active.id, { details }));
+      onChange?.();
+    } catch (e) {
+      // Shown in the same sheet as a failed Stop (an inline message would add a cell to the tile grid).
+      setError(t('tiles.feeding.pauseFailedError', { error: errorMessage(e) }));
+      setStopFailed(true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function stopBreastfeeding() {
     setBusy(true);
     try {
-      const stopped = await api.updateEvent(active.id, { endedAt: new Date().toISOString() });
+      const stopped = await api.updateEvent(active.id, stopPatch(active));
       setActive(null);
       onChange?.();
       if (askQuality) setJustStopped(stopped);
@@ -112,31 +142,52 @@ export function FeedingTile({ onChange }) {
       : activeSide
         ? describeSides(active.details)
         : null;
-  const duration = active ? formatDuration(active.startedAt) : '';
+  const paused = isPaused(active);
+  // Time actually spent feeding: it stands still while the feed is paused.
+  const duration = active ? formatElapsedMs(activeMs(active)) : '';
   const sub = active
     ? sideText
       ? t('tiles.subWithDuration', { detail: sideText, duration })
       : duration
     : undefined;
+  const runningBg = resolve(EVENT_COLORS.breastfeeding, isDark);
 
   return (
     <>
-      <EventTile
-        icon={active ? '⏹' : '🍽️'}
-        label={active ? t('tiles.feeding.stopLabel') : t('tiles.feeding.label')}
-        sub={sub}
-        color={EVENT_COLORS.breastfeeding}
-        running={!!active}
-        onClick={() => {
-          if (busy) return;
-          if (active) stopBreastfeeding();
-          else setChoosing(true);
-        }}
-      />
+      {active ? (
+        // One tile-sized block split in two halves that always sit side by side.
+        <div
+          className={`split-tile${paused ? ' paused' : ''}`}
+          style={{ '--tile-color': runningBg }}
+          role="group"
+          aria-label={t('tiles.feeding.groupLabel')}
+        >
+          <div className="split-tile-status" aria-live="off">
+            {paused ? t('tiles.feeding.pausedStatus', { duration }) : sub}
+          </div>
+          <button type="button" className="split-tile-btn" disabled={busy} onClick={togglePause}>
+            <span className="tile-icon">{paused ? '▶️' : '⏸'}</span>
+            <span className="tile-label">{paused ? t('tiles.feeding.resume') : t('tiles.feeding.pause')}</span>
+          </button>
+          <button type="button" className="split-tile-btn" disabled={busy} onClick={stopBreastfeeding}>
+            <span className="tile-icon">⏹</span>
+            <span className="tile-label">{t('tiles.feeding.stop')}</span>
+          </button>
+        </div>
+      ) : (
+        <EventTile
+          icon="🍽️"
+          label={t('tiles.feeding.label')}
+          color={EVENT_COLORS.breastfeeding}
+          onClick={() => {
+            if (!busy) setChoosing(true);
+          }}
+        />
+      )}
 
       {stopFailed && (
         <Sheet
-          title={t('tiles.feeding.stopFailedTitle')}
+          title={t('tiles.feeding.failedTitle')}
           onClose={() => {
             setStopFailed(false);
             setError(null);

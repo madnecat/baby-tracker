@@ -12,7 +12,12 @@ export function ageInMonths(dateOfBirth, atDate = new Date()) {
 export function formatDuration(startedAt, endedAt) {
   const start = new Date(startedAt);
   const end = endedAt ? new Date(endedAt) : new Date();
-  const totalSeconds = Math.max(0, Math.floor((end - start) / 1000));
+  return formatElapsedMs(end - start);
+}
+
+/** The same timer-style text for a length in milliseconds. */
+export function formatElapsedMs(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
   const h = Math.floor(totalSeconds / 3600);
   const m = Math.floor((totalSeconds % 3600) / 60);
   const s = totalSeconds % 60;

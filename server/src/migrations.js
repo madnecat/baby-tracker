@@ -112,6 +112,16 @@ const MIGRATIONS = [
     },
     log: 'Added users.language',
   },
+  {
+    version: 7,
+    run: (db) => {
+      const columns = db.prepare(`PRAGMA table_info(users)`).all();
+      if (!columns.some((c) => c.name === 'theme')) {
+        db.exec(`ALTER TABLE users ADD COLUMN theme TEXT CHECK (theme IN ('light','dark'))`);
+      }
+    },
+    log: 'Added users.theme',
+  },
 ];
 
 export function runMigrations(db) {
