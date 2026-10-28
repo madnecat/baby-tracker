@@ -1,0 +1,27 @@
+# Every PR to main must move config.yaml's version exactly one step above main's, and must not
+# contain conflict markers. Supervisor only updates an add-on when the version changes, and the
+# version on the Pi must always exist on main (see .claude/skills/workflow/SKILL.md).
+name: version-bump
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check the version step
+        run: |
+          get() { sed -n 's/^version: *"\{0,1\}\([0-9][0-9.]*\)"\{0,1\}.*/\1/p' | head -1 | tr -d '\r'; }
+          base="$(git show "origin/${{ github.base_ref }}:config.yaml" | get)"
+          new="$(get < config.yaml)"
+          echo "main: $base, this PR: $new"
+          if grep -rnE '^(<<<<<<<|>>>>>>>) ' config.yaml; then echo "conflict markers in config.yaml"; exit 1; fi
+          IFS=. read -r bM bm bp <<< "$base"; IFS=. read -r nM nm np <<< "$new"
+          ok=0
+          [ "$nM" = "$bM" ] && [ "$nm" = "$bm" ] && [ "$np" = "$((bp+1))" ] && ok=1          # patch step
+          [ "$nM" = "$bM" ] && [ "$nm" = "$((bm+1))" ] && [ "$np" = 0 ] && ok=1               # minor step
+          [ "$nM" = "$((bM+1))" ] && [ "$nm" = 0 ] && [ "$np" = 0 ] && ok=1                   # major step
+          if [ "$ok" != 1 ]; then echo "version must be exactly one step above $base (patch, minor or major), got $new"; exit 1; fi
