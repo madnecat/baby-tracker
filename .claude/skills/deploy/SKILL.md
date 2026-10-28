@@ -37,9 +37,8 @@ first and merging the bump afterwards leaves the Pi on a version `main` has not
 reached yet (this happened with 0.16.0: live while `main` still said 0.15.0), and
 the next feature then looks like it skips a number.
 
-0. **Start from a merged, up-to-date `main`.** `git switch main && git pull --ff-only`,
-   and make sure the feature PR(s) are merged. Deploy exactly what is on
-   `origin/main`; never deploy from a feature branch or a worktree.
+0. **Run the preflight. It is mandatory and enforced** (a hook in `.claude/settings.json` refuses every command that touches the Pi or the add-on until it passes):
+   `bash .claude/skills/workflow/preflight.sh deploy`. It requires the main checkout, on `main`, clean, identical to `origin/main` after a fetch, and the PR merged. Deploy exactly what is on `origin/main`; **never from a feature branch or a worktree**. Deploying is only ever done when the user asks, after the PR is merged: never "prepare" it earlier. Before step 4, read the version on the Pi (`ha apps info`) and check that `config.yaml` is exactly one step above it; if not, stop and tell the user. The whole flow (start, version, demo, PR, deploy) is in the `workflow` skill.
 1. **The version bump is part of the change, merged before deploying.** Put the
    `config.yaml` bump (semver minor for a feature, patch for a fix — Supervisor
    uses it to decide `update` vs `rebuild`, and it's the only changelog we have)

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import {
   Bar,
   CartesianGrid,
+  Cell,
   ComposedChart,
   Line,
   ResponsiveContainer,
@@ -38,9 +39,14 @@ export function NightProgressCard({ events, child, days }) {
     const rows = nightlyStretches(events, now, days);
     const withData = rows.filter((r) => r.hasData);
     if (withData.length === 0) return null;
+    // "22→23": the night is named by the evening it starts and the morning it ends, so a bar is
+    // never read as the night that *ended* on its date. Month and full wording go in the tooltip.
+    const nightLabel = (r) => `${new Date(r.start).getDate()}→${new Date(r.end).getDate()}`;
     const trend = stretchTrend(rows);
     const data = withData.map((r) => ({
-      day: formatDayShort(r.start),
+      day: nightLabel(r),
+      full: t('sleep.progress.nightOf', { from: formatDayShort(r.start), to: formatDayShort(r.end) }),
+      provisional: r.provisional,
       minutes: r.longest,
       trend: trend ? Math.max(0, Math.round(trend.intercept + trend.perDay * (r.start / DAY_MS))) : undefined,
     }));
@@ -111,10 +117,19 @@ export function NightProgressCard({ events, child, days }) {
           <Tooltip
             formatter={(value) => formatMinutes(value)}
             contentStyle={{ background: surface, border: `1px solid ${grid}`, borderRadius: 8 }}
+            labelFormatter={(_, payload) => {
+              const d = payload?.[0]?.payload;
+              if (!d) return '';
+              return d.provisional ? `${d.full} (${t('sleep.progress.ongoing')})` : d.full;
+            }}
             labelStyle={{ color: text }}
             itemStyle={{ color: text }}
           />
-          <Bar dataKey="minutes" name={t('sleep.progress.series')} fill={color} radius={[3, 3, 0, 0]} maxBarSize={18} />
+          <Bar dataKey="minutes" name={t('sleep.progress.series')} fill={color} radius={[3, 3, 0, 0]} maxBarSize={18}>
+            {data.map((d, i) => (
+              <Cell key={i} fillOpacity={d.provisional ? 0.45 : 1} />
+            ))}
+          </Bar>
           {trend && (
             <Line
               dataKey="trend"
