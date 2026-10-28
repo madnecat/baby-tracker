@@ -93,6 +93,8 @@ export default {
   'sleep.progress.title': 'Night progress',
   'sleep.progress.hint': 'Longest stretch of sleep with no pause of 10 minutes or more, night by night (7 pm – 7 am).',
   'sleep.progress.series': 'Longest stretch',
+  'sleep.progress.nightOf': 'Night of {from} to {to}',
+  'sleep.progress.ongoing': 'night under way',
   'sleep.progress.trendSeries': 'Trend',
   'sleep.progress.notEnough': 'Not enough nights logged yet to see a trend ({count}/{needed}).',
   'sleep.progress.typical': 'Indicative range at this age: {min}–{max}. Approximate, and it varies a lot between babies.',

@@ -73,8 +73,9 @@ function stretches(intervals) {
 }
 
 /**
- * One row per *completed* local night, oldest first, for the last `days` evenings.
- * Row: { key, start, end, hasData, longest, total, wakes, awake } — minutes; `key` is the evening's date.
+ * One row per local night, oldest first, for the last `days` evenings; the night under way, if
+ * there is one, comes last with `provisional: true`.
+ * Row: { key, start, end, hasData, provisional, longest, total, wakes, awake } — minutes; `key` is the evening's date.
  */
 export function nightlyStretches(events, now = Date.now(), days = T.trendNights) {
   const { intervals } = normalizeSleeps(events, now);
@@ -83,7 +84,10 @@ export function nightlyStretches(events, now = Date.now(), days = T.trendNights)
   for (let i = days; i >= 0; i -= 1) {
     const start = localAt(now, -i, T.nightStartHour);
     const end = localAt(now, -i + 1, T.nightEndHour);
-    if (end > now) continue; // tonight is not finished
+    if (start > now) continue; // this evening has not started
+    // The night that is under way (it is 05:30 and she has slept since 19:00) is reported too, but
+    // flagged: its figures can still grow, and it must not feed the trend.
+    const provisional = end > now;
     const inNight = all.filter((s) => s.end > start && s.start < end);
     const total = inNight.reduce((acc, s) => acc + (Math.min(s.end, end) - Math.max(s.start, start)) / MINUTE, 0);
     const mine = inNight.filter((s) => {
@@ -116,6 +120,7 @@ export function nightlyStretches(events, now = Date.now(), days = T.trendNights)
       start,
       end,
       hasData,
+      provisional,
       // From the start of the night, not from the start of an evening nap it was joined to; it may
       // run on past 07:00 so a baby who sleeps in is not cut short.
       longest: hasData ? Math.round(Math.max(...mine.map((s) => (s.end - Math.max(s.start, start)) / MINUTE))) : 0,
@@ -134,7 +139,7 @@ export function nightlyStretches(events, now = Date.now(), days = T.trendNights)
  * same way as the answer, a cheap honesty gauge: 0.5 is noise, close to 1 is a steady climb.
  */
 export function stretchTrend(rows) {
-  const pts = rows.filter((r) => r.hasData).map((r) => ({ x: r.start / (24 * HOUR), y: r.longest }));
+  const pts = rows.filter((r) => r.hasData && !r.provisional).map((r) => ({ x: r.start / (24 * HOUR), y: r.longest }));
   if (pts.length < T.trendMinNights) return null;
   if (pts.at(-1).x - pts[0].x < T.trendMinSpanDays) return null;
   const slopes = [];

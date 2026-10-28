@@ -98,6 +98,8 @@ export default {
   'sleep.progress.hint':
     'Plus long tronçon de sommeil sans pause d’au moins 10 minutes, nuit par nuit (19 h – 7 h).',
   'sleep.progress.series': 'Plus long tronçon',
+  'sleep.progress.nightOf': 'Nuit du {from} au {to}',
+  'sleep.progress.ongoing': 'nuit en cours',
   'sleep.progress.trendSeries': 'Tendance',
   'sleep.progress.notEnough': 'Pas encore assez de nuits enregistrées pour dégager une tendance ({count}/{needed}).',
   'sleep.progress.typical':
